@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "List Tools",
+  "version": "0.1.0",
+  "description": "Compute H3 index from latitude/longitude and resolution.",
+  "action": {
+    "default_title": "List Tools"
+  },
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  }
+}

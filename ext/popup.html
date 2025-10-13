@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>List Tools</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#111827">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="robots" content="noindex,nofollow">
+</head>
+
+<body>
+  <div class="container">
+    <!-- 首页 -->
+    <div id="homepage" class="page active">
+      <div class="page-header">
+        <h1 class="page-title">List Tools</h1>
+      </div>
+
+      <section class="search-section">
+        <div class="search-wrapper">
+          <div class="search-container">
+            <input id="searchInput" type="text" placeholder="输入list搜索工具..." autocomplete="off" />
+            <div class="search-icon">🔍</div>
+          </div>
+          <div id="searchSuggestions" class="search-suggestions" style="display: none;"></div>
+        </div>
+      </section>
+
+      <section class="card tools-section">
+        <div class="tools-grid">
+          <!-- H3 Index 工具 -->
+          <div class="tool-card" data-tool="h3">
+            <div class="tool-icon">⬢</div>
+            <div class="tool-content">
+              <h3>H3 Index</h3>
+              <p>经纬度转H3网格索引</p>
+            </div>
+          </div>
+
+          <!-- 新增工具占位符 -->
+          <div class="tool-card add-tool" data-tool="add">
+            <div class="tool-icon">➕</div>
+            <div class="tool-content">
+              <h3>新增工具</h3>
+              <p>点击创建新的工具</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- H3 Index 工具页面 -->
+    <div id="h3-tool" class="page">
+      <div class="tool-header">
+        <button id="backBtn" class="back-btn">← 返回</button>
+        <div class="tool-title-section">
+          <div class="tool-icon-large">⬢</div>
+          <h1>H3 Index</h1>
+        </div>
+        <div class="tool-description-section">
+          <p class="tool-description">经纬度转H3网格索引，支持扩圈，提供六边形预览和详细的地理数据计算功能</p>
+        </div>
+      </div>
+
+      <section class="search-section">
+        <div class="search-wrapper">
+          <div class="search-container">
+            <div class="search-tabs">
+              <button id="coordTab" class="search-tab active" data-mode="coord">经纬度</button>
+              <button id="h3Tab" class="search-tab" data-mode="h3">H3索引</button>
+            </div>
+            <div class="search-input-row">
+              <input id="searchInput" type="text" placeholder="输入经纬度..." autocomplete="off" />
+              <div class="search-icon">🔍</div>
+            </div>
+          </div>
+          <div id="searchSuggestions" class="search-suggestions" style="display: none;"></div>
+        </div>
+      </section>
+
+      <section class="card inputs">
+        <div class="input-row">
+          <div class="field main-field">
+            <label for="latlng">经纬度</label>
+            <input id="latlng" type="text" inputmode="decimal" placeholder="纬度,经度 (如: 37.775,-122.418)" />
+          </div>
+          <div class="field tiny-field">
+            <label for="res">网格级别</label>
+            <input id="res" type="number" min="0" max="15" value="10" />
+          </div>
+          <div class="field tiny-field">
+            <label for="ring">扩圈</label>
+            <input id="ring" type="number" min="0" max="10" value="0" />
+          </div>
+        </div>
+        <p id="error" class="error" hidden></p>
+      </section>
+
+      <div class="results-section">
+        <section class="card result">
+          <!-- 当前网格信息 -->
+          <div class="result-section">
+            <h3 class="section-title">当前网格信息</h3>
+            <div class="row">
+              <span class="label">H3 索引</span>
+              <code id="cell" class="mono"></code>
+            </div>
+            <div class="row">
+              <span class="label">中心点</span>
+              <code id="center-point" class="mono"></code>
+            </div>
+            <div class="row">
+              <span class="label">父单元</span>
+              <code id="parent" class="mono"></code>
+            </div>
+            <div class="row">
+              <span class="label">边长</span>
+              <code id="edge-length" class="mono"></code>
+            </div>
+            <div class="row">
+              <span class="label">面积</span>
+              <code id="hex-area" class="mono"></code>
+            </div>
+            <div class="row verts-row">
+              <span class="label">顶点串</span>
+              <div id="vertsText" class="mono verts-display"></div>
+            </div>
+          </div>
+
+          <!-- 扩圈信息 -->
+          <div id="ring-section" class="result-section" style="display: none;">
+            <h3 class="section-title">扩圈信息</h3>
+            <div class="row">
+              <span class="label">扩圈数量</span>
+              <code id="ring-count" class="mono"></code>
+            </div>
+            <div class="row verts-row">
+              <span class="label">扩圈网格</span>
+              <div id="ring-cells" class="mono verts-display"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="footer">基于 H3 网格系统 · h3-js</footer>
+    </div>
+  </div>
+  <script type="module" src="src/popup.js"></script>
+
+</body>
+
+</html>
+
+</html>
