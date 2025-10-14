@@ -70,7 +70,16 @@
         </div>
       </div>
 
-      <section class="card inputs">
+      <!-- Tab 切换 -->
+      <div class="tab-container">
+        <div class="tab-buttons">
+          <button id="coordTab" class="tab-button active" data-tab="coord">坐标计算</button>
+          <button id="gridTab" class="tab-button" data-tab="grid">网格计算</button>
+        </div>
+      </div>
+
+      <!-- 坐标计算 Tab -->
+      <section id="coordSection" class="card inputs active-tab">
         <div class="input-row">
           <div class="field main-field">
             <label for="latlng">经纬度</label>
@@ -86,6 +95,17 @@
           </div>
         </div>
         <p id="error" class="error" hidden></p>
+      </section>
+
+      <!-- 网格计算 Tab -->
+      <section id="gridSection" class="card inputs">
+        <div class="input-row">
+          <div class="field main-field">
+            <label for="h3Index">H3网格索引</label>
+            <input id="h3Index" type="text" placeholder="输入H3网格索引 (如: 8a1fb46622dffff)" value="8a1fb46622dffff" />
+          </div>
+        </div>
+        <p id="gridError" class="error" hidden></p>
       </section>
 
       <div class="results-section">

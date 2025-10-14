@@ -1,4 +1,4 @@
-import { cellToLatLng, latLngToCell, cellToParent, cellToBoundary, cellArea, getHexagonEdgeLengthAvg, gridDisk, UNITS } from "../vendor/h3.browser.mjs";
+import { cellToLatLng, latLngToCell, cellToParent, cellToBoundary, cellArea, getHexagonEdgeLengthAvg, gridDisk, UNITS, getResolution } from "../vendor/h3.browser.mjs";
 
 // 页面路由管理
 class PageRouter {
@@ -254,6 +254,7 @@ class H3Tool {
     this.toolManager = new ToolManager();
     this.searchManager = new SearchManager(this.toolManager);
     this.keyboardNav = new KeyboardNavigation();
+    this.currentTab = 'coord'; // 默认坐标计算tab
     this.init();
 
     // 将实例挂载到全局，供搜索管理器使用
@@ -313,6 +314,9 @@ class H3Tool {
 
     // H3 工具事件
     this.setupH3ToolEvents();
+
+    // Tab 切换事件
+    this.setupTabEvents();
   }
 
   showHomepage() {
@@ -368,6 +372,64 @@ class H3Tool {
     if (resInput) resInput.addEventListener("input", onInput);
     if (ringInput) ringInput.addEventListener("input", onInput);
 
+    // H3索引输入事件
+    const h3IndexInput = document.getElementById('h3Index');
+    if (h3IndexInput) {
+      h3IndexInput.addEventListener("input", () => {
+        if (this.currentTab === 'grid') {
+          this.computeGrid();
+        }
+      });
+    }
+
+  }
+
+  setupTabEvents() {
+    const coordTab = document.getElementById('coordTab');
+    const gridTab = document.getElementById('gridTab');
+    const coordSection = document.getElementById('coordSection');
+    const gridSection = document.getElementById('gridSection');
+
+    if (!coordTab || !gridTab || !coordSection || !gridSection) return;
+
+    // 坐标计算tab点击事件
+    coordTab.addEventListener('click', () => {
+      this.switchTab('coord');
+    });
+
+    // 网格计算tab点击事件
+    gridTab.addEventListener('click', () => {
+      this.switchTab('grid');
+    });
+  }
+
+  switchTab(tabName) {
+    const coordTab = document.getElementById('coordTab');
+    const gridTab = document.getElementById('gridTab');
+    const coordSection = document.getElementById('coordSection');
+    const gridSection = document.getElementById('gridSection');
+
+    // 更新tab按钮状态
+    coordTab.classList.toggle('active', tabName === 'coord');
+    gridTab.classList.toggle('active', tabName === 'grid');
+
+    // 更新输入区域显示
+    coordSection.classList.toggle('active-tab', tabName === 'coord');
+    gridSection.classList.toggle('active-tab', tabName === 'grid');
+
+    // 更新当前tab状态
+    this.currentTab = tabName;
+
+    // 清空错误信息
+    document.getElementById('error').hidden = true;
+    document.getElementById('gridError').hidden = true;
+
+    // 根据tab切换计算结果
+    if (tabName === 'coord') {
+      this.compute();
+    } else {
+      this.computeGrid();
+    }
   }
 
   initH3Tool() {
@@ -375,7 +437,19 @@ class H3Tool {
     if (latlngInput && !latlngInput.value) {
       latlngInput.value = "37.775,-122.418";
     }
-    this.compute();
+
+    // 初始化网格计算
+    const h3IndexInput = document.getElementById('h3Index');
+    if (h3IndexInput && !h3IndexInput.value) {
+      h3IndexInput.value = "8a1fb46622dffff";
+    }
+
+    // 根据当前tab计算
+    if (this.currentTab === 'coord') {
+      this.compute();
+    } else {
+      this.computeGrid();
+    }
   }
 
   parseInputs() {
@@ -469,6 +543,72 @@ class H3Tool {
     } catch (err) {
       this.showError(String(err.message || err));
     }
+  }
+
+  computeGrid() {
+    try {
+      const h3IndexInput = document.getElementById('h3Index');
+      const h3Index = h3IndexInput.value.trim();
+
+      if (!h3Index) {
+        this.clearResults();
+        return;
+      }
+
+      // 验证H3索引格式
+      const h3Pattern = /^[0-9a-fA-F]{8,15}$/;
+      if (!h3Pattern.test(h3Index)) {
+        this.showGridError('请输入有效的H3网格索引格式');
+        return;
+      }
+
+      // 获取网格信息
+      const [lat, lng] = cellToLatLng(h3Index);
+      const res = getResolution(h3Index);
+      const parent = res > 0 ? cellToParent(h3Index, res - 1) : null;
+      const vertsPairs = cellToBoundary(h3Index, true)
+        .map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
+      const edgeLen = getHexagonEdgeLengthAvg(res, UNITS.m);
+      const area = cellArea(h3Index, UNITS.m2);
+
+      // 更新显示
+      document.getElementById('cell').textContent = h3Index;
+      document.getElementById('center-point').textContent = `${lng.toFixed(6)},${lat.toFixed(6)}`;
+      document.getElementById('parent').textContent = parent ? String(parent) : '无';
+      document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m`;
+      document.getElementById('hex-area').textContent = `${area.toFixed(2)} m²`;
+      document.getElementById('vertsText').textContent = vertsPairs.join(';');
+
+      // 隐藏扩圈信息（网格计算模式下不显示）
+      document.getElementById('ring-section').style.display = 'none';
+
+      // 清空错误
+      this.hideGridError();
+
+    } catch (err) {
+      this.showGridError(String(err.message || err));
+    }
+  }
+
+  showGridError(msg) {
+    const errorEl = document.getElementById('gridError');
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+    this.clearResults();
+  }
+
+  hideGridError() {
+    document.getElementById('gridError').hidden = true;
+  }
+
+  clearResults() {
+    document.getElementById('cell').textContent = '';
+    document.getElementById('center-point').textContent = '';
+    document.getElementById('parent').textContent = '';
+    document.getElementById('edge-length').textContent = '';
+    document.getElementById('hex-area').textContent = '';
+    document.getElementById('vertsText').textContent = '';
+    document.getElementById('ring-section').style.display = 'none';
   }
 
   showError(msg) {
