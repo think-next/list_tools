@@ -510,8 +510,9 @@ class H3Tool {
       // 计算边长和面积
       const edgeLen = getHexagonEdgeLengthAvg(res, UNITS.m);
       const area = cellArea(cell, UNITS.m2);
+      const radius = this.calculateCircleRadius(area);
       document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m`;
-      document.getElementById('hex-area').textContent = `${area.toFixed(2)} m²`;
+      document.getElementById('hex-area').textContent = `${area.toFixed(2)} m² (半径: ${radius.toFixed(1)} m)`;
 
       const result = {
         input: { lat, lng, res, ring },
@@ -570,13 +571,14 @@ class H3Tool {
         .map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
       const edgeLen = getHexagonEdgeLengthAvg(res, UNITS.m);
       const area = cellArea(h3Index, UNITS.m2);
+      const radius = this.calculateCircleRadius(area);
 
       // 更新显示
       document.getElementById('cell').textContent = h3Index;
       document.getElementById('center-point').textContent = `${lng.toFixed(6)},${lat.toFixed(6)}`;
       document.getElementById('parent').textContent = parent ? String(parent) : '无';
       document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m`;
-      document.getElementById('hex-area').textContent = `${area.toFixed(2)} m²`;
+      document.getElementById('hex-area').textContent = `${area.toFixed(2)} m² (半径: ${radius.toFixed(1)} m)`;
       document.getElementById('vertsText').textContent = vertsPairs.join(';');
 
       // 隐藏扩圈信息（网格计算模式下不显示）
@@ -599,6 +601,13 @@ class H3Tool {
 
   hideGridError() {
     document.getElementById('gridError').hidden = true;
+  }
+
+  // 根据面积计算圆形半径
+  calculateCircleRadius(area) {
+    // 面积 = π * r²，所以 r = √(面积 / π)
+    const radius = Math.sqrt(area / Math.PI);
+    return radius;
   }
 
   clearResults() {

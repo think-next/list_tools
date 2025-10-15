@@ -318,6 +318,14 @@ input[type="range"] {
     gap: 16px
 }
 
+/* 移除结果卡片的背景色，让外层浅绿色背景显示 */
+.card.result {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
 .row {
     display: flex;
     justify-content: space-between;
@@ -336,19 +344,23 @@ input[type="range"] {
 .row:nth-child(odd) {
     background: rgba(255, 193, 7, 0.12);
     border-radius: 6px;
-    margin: 0 -4px;
+    margin: 0;
+    padding: 8px 8px;
+    /* 增加左右padding来扩展背景 */
 }
 
 .row.two:nth-child(odd) {
     background: rgba(255, 193, 7, 0.12);
     border-radius: 6px;
-    margin: 0 -4px;
+    margin: 0;
+    padding: 8px 8px;
 }
 
 .verts-row:nth-child(odd) {
     background: rgba(255, 193, 7, 0.12);
     border-radius: 6px;
-    margin: 0 -4px;
+    margin: 0;
+    padding: 8px 8px;
 }
 
 .label {
