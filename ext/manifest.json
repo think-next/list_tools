@@ -3,6 +3,9 @@
   "name": "List Tools",
   "version": "0.1.0",
   "description": "Compute H3 index from latitude/longitude and resolution.",
+  "permissions": [
+    "tabs"
+  ],
   "action": {
     "default_title": "List Tools"
   },

@@ -40,15 +40,54 @@ class ToolManager {
         keywords: ['list', 'h3', 'index', '经纬度', '网格', '地理']
       }
     ];
+    this.customTools = this.loadCustomTools();
+  }
+
+  loadCustomTools() {
+    try {
+      const stored = localStorage.getItem('h3index_custom_tools');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.error('Failed to load custom tools:', e);
+      return [];
+    }
+  }
+
+  saveCustomTools() {
+    try {
+      localStorage.setItem('h3index_custom_tools', JSON.stringify(this.customTools));
+    } catch (e) {
+      console.error('Failed to save custom tools:', e);
+    }
+  }
+
+  addCustomTool(name, url) {
+    const id = 'custom_' + Date.now();
+    const customTool = {
+      id,
+      name,
+      url,
+      description: '自定义工具链接',
+      icon: '🔗',
+      keywords: ['custom', 'link', '自定义', name.toLowerCase()]
+    };
+    this.customTools.push(customTool);
+    this.saveCustomTools();
+    return customTool;
+  }
+
+  getAllTools() {
+    return [...this.tools, ...this.customTools];
   }
 
   searchTools(query) {
+    const allTools = this.getAllTools();
     if (!query.trim()) {
-      return this.tools;
+      return allTools;
     }
 
     const lowerQuery = query.toLowerCase();
-    return this.tools.filter(tool =>
+    return allTools.filter(tool =>
       tool.name.toLowerCase().includes(lowerQuery) ||
       tool.description.toLowerCase().includes(lowerQuery) ||
       tool.keywords.some(keyword => keyword.toLowerCase().includes(lowerQuery))
@@ -56,7 +95,8 @@ class ToolManager {
   }
 
   getToolById(id) {
-    return this.tools.find(tool => tool.id === id);
+    const allTools = this.getAllTools();
+    return allTools.find(tool => tool.id === id);
   }
 }
 
@@ -325,6 +365,8 @@ class H3Tool {
     setTimeout(() => {
       this.keyboardNav.updateToolCards();
     }, 100);
+    // 更新自定义工具显示
+    this.updateCustomToolsDisplay();
   }
 
   showTool(toolId) {
@@ -335,8 +377,136 @@ class H3Tool {
   }
 
   handleAddTool() {
-    // 预留功能：显示新增工具对话框
-    alert('新增工具功能正在开发中...');
+    this.showAddToolModal();
+  }
+
+  showAddToolModal() {
+    const modal = document.getElementById('addToolModal');
+    const toolNameInput = document.getElementById('toolName');
+    const toolUrlInput = document.getElementById('toolUrl');
+    const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const closeBtn = document.getElementById('closeModal');
+
+    // 清空输入框
+    toolNameInput.value = '';
+    toolUrlInput.value = '';
+
+    // 显示模态框
+    modal.style.display = 'flex';
+
+    // 聚焦到名称输入框
+    setTimeout(() => toolNameInput.focus(), 100);
+
+    // 保存按钮事件
+    const handleSave = () => {
+      const name = toolNameInput.value.trim();
+      const url = toolUrlInput.value.trim();
+
+      if (!name) {
+        alert('请输入工具名称');
+        toolNameInput.focus();
+        return;
+      }
+
+      if (!url) {
+        alert('请输入跳转链接');
+        toolUrlInput.focus();
+        return;
+      }
+
+      // 验证URL格式
+      try {
+        new URL(url);
+      } catch (e) {
+        alert('请输入有效的URL格式');
+        toolUrlInput.focus();
+        return;
+      }
+
+      // 添加自定义工具
+      const customTool = this.toolManager.addCustomTool(name, url);
+
+      // 更新UI
+      this.updateCustomToolsDisplay();
+
+      // 关闭模态框
+      this.hideAddToolModal();
+    };
+
+    // 绑定事件
+    saveBtn.onclick = handleSave;
+    cancelBtn.onclick = () => this.hideAddToolModal();
+    closeBtn.onclick = () => this.hideAddToolModal();
+
+    // 回车键保存
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSave();
+      } else if (e.key === 'Escape') {
+        this.hideAddToolModal();
+      }
+    };
+
+    toolNameInput.onkeydown = handleKeyDown;
+    toolUrlInput.onkeydown = handleKeyDown;
+
+    // 点击模态框背景关闭
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        this.hideAddToolModal();
+      }
+    };
+  }
+
+  hideAddToolModal() {
+    const modal = document.getElementById('addToolModal');
+    modal.style.display = 'none';
+  }
+
+  updateCustomToolsDisplay() {
+    const customToolsSection = document.getElementById('custom-tools-section');
+    const customToolsGrid = document.getElementById('custom-tools');
+
+    if (this.toolManager.customTools.length === 0) {
+      customToolsSection.style.display = 'none';
+      return;
+    }
+
+    customToolsSection.style.display = 'block';
+    customToolsGrid.innerHTML = '';
+
+    this.toolManager.customTools.forEach(tool => {
+      const toolCard = document.createElement('div');
+      toolCard.className = 'tool-card custom-tool';
+      toolCard.dataset.tool = tool.id;
+
+      toolCard.innerHTML = `
+        <div class="tool-icon">${tool.icon}</div>
+        <div class="tool-content">
+          <h3>${tool.name}</h3>
+          <p>${tool.description}</p>
+        </div>
+      `;
+
+      // 添加点击事件
+      toolCard.addEventListener('click', () => {
+        this.handleCustomToolClick(tool);
+      });
+
+      customToolsGrid.appendChild(toolCard);
+    });
+
+    // 更新键盘导航
+    setTimeout(() => {
+      this.keyboardNav.updateToolCards();
+    }, 100);
+  }
+
+  handleCustomToolClick(tool) {
+    // 在新标签页中打开链接
+    chrome.tabs.create({ url: tool.url });
   }
 
   setupH3ToolEvents() {
@@ -486,7 +656,7 @@ class H3Tool {
       this.showError("");
       const { lat, lng, res, ring } = this.parseInputs();
       const cell = latLngToCell(lat, lng, res);
-      const [cLat, cLng] = cellToLatLng(cell);
+      const [cLat, cLng] = cellToLatLng(cell); // 注意返回顺序为 [lat, lng]
       const parent = res > 0 ? cellToParent(cell, res - 1) : "无";
 
       // 扩圈处理
@@ -503,16 +673,32 @@ class H3Tool {
       // 显示父单元信息
       document.getElementById('parent').textContent = String(parent);
 
-      const vertsPairs = cellToBoundary(cell, true) // lat,lng pairs, ccw
-        .map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
+      // 使用默认格式，返回 [lat, lng]（注意：GeoJSON 格式会返回 [lng, lat]）
+      const boundary = cellToBoundary(cell); // [[lat, lng], ...]
+      const vertsPairs = boundary.map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
       document.getElementById('vertsText').textContent = vertsPairs.join(';');
 
       // 计算边长和面积
       const edgeLen = getHexagonEdgeLengthAvg(res, UNITS.m);
       const area = cellArea(cell, UNITS.m2);
       const radius = this.calculateCircleRadius(area);
-      document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m`;
+      // 计算该单元的最长/最短边长与半径
+      const edgeStats = this.calculateEdgeStats(boundary);
+      // 半径需要用中心点(lat, lng)，谨防经纬度顺序颠倒
+      const radiusStats = this.calculateRadiusStats([cLat, cLng], boundary);
+      document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m (最长: ${edgeStats.max.toFixed(2)} m, 最短: ${edgeStats.min.toFixed(2)} m)`;
       document.getElementById('hex-area').textContent = `${area.toFixed(2)} m² (半径: ${radius.toFixed(1)} m)`;
+      const radiusVertexEl = document.getElementById('radius-vertex');
+      if (radiusVertexEl) {
+        radiusVertexEl.textContent = `最长: ${Math.round(radiusStats.max)} m, 最短: ${Math.round(radiusStats.min)} m`;
+      }
+
+      // 计算内切半径（边心半径，近似：边中点与中心的距离，取最长/最短）
+      const inStats = this.calculateInradiusStats([cLat, cLng], boundary);
+      const radiusInEl = document.getElementById('radius-inradius');
+      if (radiusInEl) {
+        radiusInEl.textContent = `最长: ${Math.round(inStats.max)} m, 最短: ${Math.round(inStats.min)} m`;
+      }
 
       const result = {
         input: { lat, lng, res, ring },
@@ -564,22 +750,36 @@ class H3Tool {
       }
 
       // 获取网格信息
-      const [lat, lng] = cellToLatLng(h3Index);
+      const [lat, lng] = cellToLatLng(h3Index); // [lat, lng]
       const res = getResolution(h3Index);
       const parent = res > 0 ? cellToParent(h3Index, res - 1) : null;
-      const vertsPairs = cellToBoundary(h3Index, true)
+      // 使用默认格式，返回 [lat, lng]
+      const boundary = cellToBoundary(h3Index); // [[lat, lng], ...]
+      const vertsPairs = boundary
         .map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
       const edgeLen = getHexagonEdgeLengthAvg(res, UNITS.m);
       const area = cellArea(h3Index, UNITS.m2);
       const radius = this.calculateCircleRadius(area);
+      // 计算该单元的最长/最短边长与半径
+      const edgeStats = this.calculateEdgeStats(boundary);
+      const radiusStats = this.calculateRadiusStats([lat, lng], boundary);
 
       // 更新显示
       document.getElementById('cell').textContent = h3Index;
       document.getElementById('center-point').textContent = `${lng.toFixed(6)},${lat.toFixed(6)}`;
       document.getElementById('parent').textContent = parent ? String(parent) : '无';
-      document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m`;
+      document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m (最长: ${edgeStats.max.toFixed(2)} m, 最短: ${edgeStats.min.toFixed(2)} m)`;
       document.getElementById('hex-area').textContent = `${area.toFixed(2)} m² (半径: ${radius.toFixed(1)} m)`;
       document.getElementById('vertsText').textContent = vertsPairs.join(';');
+      const radiusVertexEl = document.getElementById('radius-vertex');
+      if (radiusVertexEl) {
+        radiusVertexEl.textContent = `最长: ${Math.round(radiusStats.max)} m, 最短: ${Math.round(radiusStats.min)} m`;
+      }
+      const inStats = this.calculateInradiusStats([lat, lng], boundary);
+      const radiusInEl = document.getElementById('radius-inradius');
+      if (radiusInEl) {
+        radiusInEl.textContent = `最长: ${Math.round(inStats.max)} m, 最短: ${Math.round(inStats.min)} m`;
+      }
 
       // 隐藏扩圈信息（网格计算模式下不显示）
       document.getElementById('ring-section').style.display = 'none';
@@ -610,6 +810,74 @@ class H3Tool {
     return radius;
   }
 
+  // 计算两点间测地线距离（米）
+  haversineDistanceMeters(lat1, lng1, lat2, lng2) {
+    const toRad = (deg) => deg * Math.PI / 180;
+    const R = 6371008.8; // 平均地球半径（米）
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // 计算边界的最长/最短边长（米）
+  calculateEdgeStats(boundaryLatLngPairs) {
+    // boundary: [[lat, lng], ...] 逆时针，闭合六边形
+    if (!boundaryLatLngPairs || boundaryLatLngPairs.length < 3) {
+      return { min: 0, max: 0 };
+    }
+    let minLen = Infinity;
+    let maxLen = 0;
+    const n = boundaryLatLngPairs.length;
+    for (let i = 0; i < n; i++) {
+      const [lat1, lng1] = boundaryLatLngPairs[i];
+      const [lat2, lng2] = boundaryLatLngPairs[(i + 1) % n];
+      const d = this.haversineDistanceMeters(lat1, lng1, lat2, lng2);
+      if (d < minLen) minLen = d;
+      if (d > maxLen) maxLen = d;
+    }
+    return { min: minLen, max: maxLen };
+  }
+
+  // 计算中心点到各顶点的最长/最短半径（米）
+  calculateRadiusStats(centerLatLng, boundaryLatLngPairs) {
+    if (!boundaryLatLngPairs || boundaryLatLngPairs.length === 0) {
+      return { min: 0, max: 0 };
+    }
+    const [cLat, cLng] = centerLatLng;
+    let minR = Infinity;
+    let maxR = 0;
+    for (const [lat, lng] of boundaryLatLngPairs) {
+      const r = this.haversineDistanceMeters(cLat, cLng, lat, lng);
+      if (r < minR) minR = r;
+      if (r > maxR) maxR = r;
+    }
+    return { min: minR, max: maxR };
+  }
+
+  // 计算中心点到各边中点的最长/最短半径（米）
+  calculateInradiusStats(centerLatLng, boundaryLatLngPairs) {
+    if (!boundaryLatLngPairs || boundaryLatLngPairs.length < 3) {
+      return { min: 0, max: 0 };
+    }
+    const [cLat, cLng] = centerLatLng;
+    let minR = Infinity;
+    let maxR = 0;
+    const n = boundaryLatLngPairs.length;
+    for (let i = 0; i < n; i++) {
+      const [lat1, lng1] = boundaryLatLngPairs[i];
+      const [lat2, lng2] = boundaryLatLngPairs[(i + 1) % n];
+      // 边中点（在经纬度空间线性插值作为近似）
+      const midLat = (lat1 + lat2) / 2;
+      const midLng = (lng1 + lng2) / 2;
+      const r = this.haversineDistanceMeters(cLat, cLng, midLat, midLng);
+      if (r < minR) minR = r;
+      if (r > maxR) maxR = r;
+    }
+    return { min: minR, max: maxR };
+  }
+
   clearResults() {
     document.getElementById('cell').textContent = '';
     document.getElementById('center-point').textContent = '';
@@ -617,6 +885,10 @@ class H3Tool {
     document.getElementById('edge-length').textContent = '';
     document.getElementById('hex-area').textContent = '';
     document.getElementById('vertsText').textContent = '';
+    const radiusVertexEl = document.getElementById('radius-vertex');
+    if (radiusVertexEl) radiusVertexEl.textContent = '';
+    const radiusInEl = document.getElementById('radius-inradius');
+    if (radiusInEl) radiusInEl.textContent = '';
     document.getElementById('ring-section').style.display = 'none';
   }
 

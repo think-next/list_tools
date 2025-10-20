@@ -35,7 +35,7 @@
       </section>
 
       <section class="card tools-section">
-        <div class="tools-grid">
+        <div class="tools-grid" id="builtin-tools">
           <!-- H3 Index 工具 -->
           <div class="tool-card" data-tool="h3">
             <div class="tool-icon">⬢</div>
@@ -53,6 +53,12 @@
               <p>点击创建新的工具</p>
             </div>
           </div>
+        </div>
+
+        <!-- 自定义工具区域 -->
+        <div id="custom-tools-section" class="custom-tools-section" style="display: none;">
+          <h3 class="custom-tools-title">自定义工具</h3>
+          <div class="tools-grid" id="custom-tools"></div>
         </div>
       </section>
     </div>
@@ -126,8 +132,19 @@
               <code id="parent" class="mono"></code>
             </div>
             <div class="row">
-              <span class="label">边长</span>
+              <span class="label">边长 <span class="info"
+                  data-tip="边长：该单元六条边的测地线长度。主数值为该分辨率的全球平均边长；括号为当前单元的最长/最短边长。">ⓘ</span></span>
               <code id="edge-length" class="mono"></code>
+            </div>
+            <div class="row two">
+              <div>
+                <span class="label">顶点半径 <span class="info" data-tip="外接半径：中心到六个顶点的测地线距离，显示最长/最短。">ⓘ</span></span>
+                <code id="radius-vertex" class="mono"></code>
+              </div>
+              <div>
+                <span class="label">边心半径 <span class="info" data-tip="内切半径（近似）：中心到各边中点的测地线距离，显示最长/最短。">ⓘ</span></span>
+                <code id="radius-inradius" class="mono"></code>
+              </div>
             </div>
             <div class="row">
               <span class="label">面积</span>
@@ -158,6 +175,30 @@
     </div>
   </div>
   <script type="module" src="src/popup.js"></script>
+
+  <!-- 新增工具模态框 -->
+  <div id="addToolModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>新增自定义工具</h2>
+        <button id="closeModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="toolName">工具名称</label>
+          <input type="text" id="toolName" placeholder="请输入工具名称" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label for="toolUrl">跳转链接</label>
+          <input type="url" id="toolUrl" placeholder="https://example.com">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelBtn" class="btn btn-secondary">取消</button>
+        <button id="saveBtn" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 
