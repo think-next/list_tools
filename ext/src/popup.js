@@ -820,7 +820,7 @@ class H3Tool {
         // 限制显示的坐标长度，与其他数据项保持一致
         const fullCoordsText = allVertexCoords.join(';');
         const maxDisplayLength = 35; // 限制显示长度为35个字符
-        const displayCoordsText = fullCoordsText.length > maxDisplayLength 
+        const displayCoordsText = fullCoordsText.length > maxDisplayLength
           ? fullCoordsText.substring(0, maxDisplayLength) + '...'
           : fullCoordsText;
 
