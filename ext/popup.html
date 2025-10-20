@@ -66,7 +66,6 @@
     <!-- H3 Index 工具页面 -->
     <div id="h3-tool" class="page">
       <div class="tool-header">
-        <button id="backBtn" class="back-btn">← 返回</button>
         <div class="tool-title-section">
           <div class="tool-icon-large">⬢</div>
           <h1>H3 Index</h1>
@@ -167,10 +166,18 @@
               <span class="label">扩圈网格</span>
               <div id="ring-cells" class="mono verts-display"></div>
             </div>
+            <div class="row verts-row">
+              <span class="label">所有顶点坐标</span>
+              <div class="vertex-coords-container">
+                <div id="all-vertex-coords" class="mono verts-display"></div>
+                <button id="copyVertexCoordsBtn" class="copy-btn" title="复制所有顶点坐标">📋</button>
+              </div>
+            </div>
           </div>
         </section>
       </div>
 
+      <button id="backBtn" class="back-btn">← 返回</button>
       <footer class="footer">基于 H3 网格系统 · h3-js</footer>
     </div>
   </div>

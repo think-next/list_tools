@@ -76,6 +76,16 @@ class ToolManager {
     return customTool;
   }
 
+  deleteCustomTool(id) {
+    const index = this.customTools.findIndex(tool => tool.id === id);
+    if (index !== -1) {
+      this.customTools.splice(index, 1);
+      this.saveCustomTools();
+      return true;
+    }
+    return false;
+  }
+
   getAllTools() {
     return [...this.tools, ...this.customTools];
   }
@@ -446,11 +456,58 @@ class H3Tool {
         handleSave();
       } else if (e.key === 'Escape') {
         this.hideAddToolModal();
+      } else if (e.key === 'Tab') {
+        // Tab键导航：在输入框之间切换
+        e.preventDefault();
+        if (e.shiftKey) {
+          // Shift+Tab: 反向导航
+          if (e.target === toolUrlInput) {
+            toolNameInput.focus();
+          } else if (e.target === toolNameInput) {
+            cancelBtn.focus();
+          }
+        } else {
+          // Tab: 正向导航
+          if (e.target === toolNameInput) {
+            toolUrlInput.focus();
+          } else if (e.target === toolUrlInput) {
+            saveBtn.focus();
+          }
+        }
       }
     };
 
     toolNameInput.onkeydown = handleKeyDown;
     toolUrlInput.onkeydown = handleKeyDown;
+
+    // 为按钮添加键盘导航支持
+    saveBtn.onkeydown = (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          toolUrlInput.focus();
+        } else {
+          cancelBtn.focus();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    cancelBtn.onkeydown = (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          saveBtn.focus();
+        } else {
+          toolNameInput.focus();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        this.hideAddToolModal();
+      }
+    };
 
     // 点击模态框背景关闭
     modal.onclick = (e) => {
@@ -488,11 +545,23 @@ class H3Tool {
           <h3>${tool.name}</h3>
           <p>${tool.description}</p>
         </div>
+        <button class="delete-btn" data-tool-id="${tool.id}" title="删除工具">×</button>
       `;
 
       // 添加点击事件
-      toolCard.addEventListener('click', () => {
+      toolCard.addEventListener('click', (e) => {
+        // 如果点击的是删除按钮，不触发工具点击
+        if (e.target.classList.contains('delete-btn')) {
+          return;
+        }
         this.handleCustomToolClick(tool);
+      });
+
+      // 添加删除按钮事件
+      const deleteBtn = toolCard.querySelector('.delete-btn');
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡
+        this.handleDeleteCustomTool(tool);
       });
 
       customToolsGrid.appendChild(toolCard);
@@ -507,6 +576,23 @@ class H3Tool {
   handleCustomToolClick(tool) {
     // 在新标签页中打开链接
     chrome.tabs.create({ url: tool.url });
+  }
+
+  handleDeleteCustomTool(tool) {
+    // 确认删除
+    if (confirm(`确定要删除工具 "${tool.name}" 吗？`)) {
+      const success = this.toolManager.deleteCustomTool(tool.id);
+      if (success) {
+        // 更新UI显示
+        this.updateCustomToolsDisplay();
+        // 更新键盘导航
+        setTimeout(() => {
+          this.keyboardNav.updateToolCards();
+        }, 100);
+      } else {
+        alert('删除失败，请重试');
+      }
+    }
   }
 
   setupH3ToolEvents() {
@@ -722,6 +808,28 @@ class H3Tool {
         // 显示扩圈网格列表，使用英文逗号拼接
         const ringCellsContainer = document.getElementById('ring-cells');
         ringCellsContainer.textContent = ringCells.join(',');
+
+        // 收集所有扩圈网格的顶点坐标
+        const allVertexCoords = [];
+        ringCells.forEach(cell => {
+          const boundary = cellToBoundary(cell);
+          const vertsPairs = boundary.map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
+          allVertexCoords.push(...vertsPairs);
+        });
+
+        // 限制显示的坐标长度，与其他数据项保持一致
+        const fullCoordsText = allVertexCoords.join(';');
+        const maxDisplayLength = 35; // 限制显示长度为35个字符
+        const displayCoordsText = fullCoordsText.length > maxDisplayLength 
+          ? fullCoordsText.substring(0, maxDisplayLength) + '...'
+          : fullCoordsText;
+
+        // 显示所有顶点坐标（限制长度）
+        const allVertexCoordsContainer = document.getElementById('all-vertex-coords');
+        allVertexCoordsContainer.textContent = displayCoordsText;
+
+        // 设置复制按钮功能（复制完整数据）
+        this.setupVertexCoordsCopyButton(fullCoordsText);
       } else {
         ringSection.style.display = 'none';
       }
@@ -890,6 +998,33 @@ class H3Tool {
     const radiusInEl = document.getElementById('radius-inradius');
     if (radiusInEl) radiusInEl.textContent = '';
     document.getElementById('ring-section').style.display = 'none';
+  }
+
+  setupVertexCoordsCopyButton(coordsText) {
+    const copyBtn = document.getElementById('copyVertexCoordsBtn');
+    if (!copyBtn) return;
+
+    // 移除之前的事件监听器
+    copyBtn.replaceWith(copyBtn.cloneNode(true));
+    const newCopyBtn = document.getElementById('copyVertexCoordsBtn');
+
+    newCopyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(coordsText);
+        // 临时改变按钮文本显示复制成功
+        const originalText = newCopyBtn.textContent;
+        newCopyBtn.textContent = '✓';
+        newCopyBtn.style.background = 'var(--ok)';
+
+        setTimeout(() => {
+          newCopyBtn.textContent = originalText;
+          newCopyBtn.style.background = 'var(--accent)';
+        }, 1000);
+      } catch (err) {
+        console.error('复制失败:', err);
+        alert('复制失败，请手动选择文本复制');
+      }
+    });
   }
 
   showError(msg) {
