@@ -1,13 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "List Tools",
+  "name": "List Tools - H3 地理网格工具集",
   "version": "0.1.0",
-  "description": "Compute H3 index from latitude/longitude and resolution.",
+  "description": "专业的 H3 地理网格索引计算工具。支持坐标转 H3 索引、网格扩圈、详细地理数据分析（边长/面积/半径）和自定义工具管理。适合 GIS 开发、数据分析、物流规划和位置服务。",
+  "author": "List Tools Team",
   "permissions": [
     "tabs"
   ],
   "action": {
-    "default_title": "List Tools"
+    "default_title": "List Tools - H3 网格工具",
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "src/background.js",
