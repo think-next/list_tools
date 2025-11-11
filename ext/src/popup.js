@@ -691,7 +691,7 @@ class H3Tool {
   initH3Tool() {
     const latlngInput = document.getElementById('latlng');
     if (latlngInput && !latlngInput.value) {
-      latlngInput.value = "37.775,-122.418";
+      latlngInput.value = "-122.418,37.775";
     }
 
     // 初始化网格计算
@@ -721,14 +721,14 @@ class H3Tool {
     const parts = latlngStr.split(',').map(part => part.trim());
 
     if (parts.length !== 2) {
-      throw new Error("请输入格式：纬度,经度");
+      throw new Error("请输入格式：经度,纬度");
     }
 
-    const lat = parseFloat(parts[0]);
-    const lng = parseFloat(parts[1]);
+    const lng = parseFloat(parts[0]);
+    const lat = parseFloat(parts[1]);
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(res) || !Number.isFinite(ring)) {
-      throw new Error("请输入有效的纬度、经度、网格级别和扩圈数");
+      throw new Error("请输入有效的经度、纬度、网格级别和扩圈数");
     }
     if (lat < -90 || lat > 90) throw new Error("纬度范围应在 -90 到 90");
     if (lng < -180 || lng > 180) throw new Error("经度范围应在 -180 到 180");
