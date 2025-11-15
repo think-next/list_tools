@@ -212,7 +212,8 @@ body {
 }
 
 input[type="number"],
-input[type="text"] {
+input[type="text"],
+textarea {
     appearance: textfield;
     background: var(--card);
     border: 2px solid var(--border);
@@ -222,10 +223,18 @@ input[type="text"] {
     outline: none;
     font-size: 14px;
     transition: all 0.2s ease;
+    font-family: inherit;
+    resize: vertical;
+}
+
+textarea {
+    min-height: 80px;
+    line-height: 1.5;
 }
 
 input[type="number"]:focus,
-input[type="text"]:focus {
+input[type="text"]:focus,
+textarea:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
 }
@@ -233,7 +242,8 @@ input[type="text"]:focus {
 @media (prefers-color-scheme: light) {
 
     input[type="number"],
-    input[type="text"] {
+    input[type="text"],
+    textarea {
         background: #fff
     }
 }

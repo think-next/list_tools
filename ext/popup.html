@@ -80,6 +80,7 @@
         <div class="tab-buttons">
           <button id="coordTab" class="tab-button active" data-tab="coord">坐标计算</button>
           <button id="gridTab" class="tab-button" data-tab="grid">网格计算</button>
+          <button id="fenceTab" class="tab-button" data-tab="fence">围栏计算</button>
         </div>
       </div>
 
@@ -113,6 +114,24 @@
         <p id="gridError" class="error" hidden></p>
       </section>
 
+      <!-- 围栏计算 Tab -->
+      <section id="fenceSection" class="card inputs">
+        <div class="input-row">
+          <div class="field main-field">
+            <label for="fenceInput">围栏坐标</label>
+            <textarea id="fenceInput" rows="4"
+              placeholder="输入围栏坐标点，用分号分隔&#10;格式：经度,纬度;经度,纬度;...&#10;例如：&#10;116.400691,39.907426;116.400359,39.906849;116.400123,39.907123"></textarea>
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="field tiny-field">
+            <label for="fenceRes">网格级别</label>
+            <input id="fenceRes" type="number" min="0" max="15" value="10" />
+          </div>
+        </div>
+        <p id="fenceError" class="error" hidden></p>
+      </section>
+
       <div class="results-section">
         <section class="card result">
           <!-- 当前网格信息 -->
@@ -131,19 +150,8 @@
               <code id="parent" class="mono"></code>
             </div>
             <div class="row">
-              <span class="label">边长 <span class="info"
-                  data-tip="边长：该单元六条边的测地线长度。主数值为该分辨率的全球平均边长；括号为当前单元的最长/最短边长。">ⓘ</span></span>
+              <span class="label">顶点距离 <span class="info" data-tip="顶点距离：计算中心点到各个顶点的距离">ⓘ</span></span>
               <code id="edge-length" class="mono"></code>
-            </div>
-            <div class="row two">
-              <div>
-                <span class="label">顶点半径 <span class="info" data-tip="外接半径：中心到六个顶点的测地线距离，显示最长/最短。">ⓘ</span></span>
-                <code id="radius-vertex" class="mono"></code>
-              </div>
-              <div>
-                <span class="label">边心半径 <span class="info" data-tip="内切半径（近似）：中心到各边中点的测地线距离，显示最长/最短。">ⓘ</span></span>
-                <code id="radius-inradius" class="mono"></code>
-              </div>
             </div>
             <div class="row">
               <span class="label">面积</span>
@@ -174,10 +182,93 @@
               </div>
             </div>
           </div>
+
+          <!-- 围栏计算结果 -->
+          <div id="fence-result-section" class="result-section" style="display: none;">
+            <h3 class="section-title">围栏计算结果</h3>
+            <div class="row">
+              <span class="label">覆盖网格数量</span>
+              <code id="fence-cell-count" class="mono"></code>
+            </div>
+            <div class="row verts-row">
+              <span class="label">覆盖网格列表</span>
+              <div id="fence-cells" class="mono verts-display"></div>
+            </div>
+            <div class="row verts-row">
+              <span class="label">所有顶点坐标</span>
+              <div class="vertex-coords-container">
+                <div id="fence-all-vertex-coords" class="mono verts-display"></div>
+                <button id="copyFenceVertexCoordsBtn" class="copy-btn" title="复制所有顶点坐标">📋</button>
+              </div>
+            </div>
+            <div class="row verts-row">
+              <span class="label">边界提取</span>
+              <div class="vertex-coords-container">
+                <div id="fence-boundary-coords" class="mono verts-display"></div>
+                <button id="copyFenceBoundaryCoordsBtn" class="copy-btn" title="复制边界坐标">📋</button>
+              </div>
+            </div>
+            <div class="row verts-row">
+              <span class="label">蜂窝围栏</span>
+              <div class="vertex-coords-container">
+                <div id="fence-honeycomb-coords" class="mono verts-display"></div>
+                <button id="copyFenceHoneycombBtn" class="copy-btn" title="复制蜂窝围栏坐标">📋</button>
+              </div>
+            </div>
+          </div>
         </section>
       </div>
 
       <button id="backBtn" class="back-btn">← 返回</button>
+      <footer class="footer">基于 H3 网格系统 · h3-js</footer>
+    </div>
+
+    <!-- 围栏计算子页面 -->
+    <div id="fence-tool" class="page">
+      <div class="tool-header">
+        <div class="tool-title-section">
+          <div class="tool-icon-large">🔲</div>
+          <h1>围栏计算</h1>
+        </div>
+        <div class="tool-description-section">
+          <p class="tool-description">基于H3网格的围栏计算功能，支持围栏区域分析和网格覆盖计算</p>
+        </div>
+      </div>
+
+      <section class="card inputs">
+        <div class="input-row">
+          <div class="field main-field">
+            <label for="fenceInput">围栏坐标</label>
+            <textarea id="fenceInput" rows="4"
+              placeholder="输入围栏坐标点，每行一个坐标点&#10;格式：经度,纬度&#10;例如：&#10;-122.418,37.775&#10;-122.419,37.776&#10;-122.420,37.775"></textarea>
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="field tiny-field">
+            <label for="fenceRes">网格级别</label>
+            <input id="fenceRes" type="number" min="0" max="15" value="10" />
+          </div>
+        </div>
+        <p id="fenceError" class="error" hidden></p>
+      </section>
+
+      <div class="results-section">
+        <section class="card result">
+          <div class="result-section">
+            <h3 class="section-title">围栏计算结果</h3>
+            <div class="row">
+              <span class="label">覆盖网格数量</span>
+              <code id="fence-cell-count" class="mono"></code>
+            </div>
+            <div class="row verts-row">
+              <span class="label">覆盖网格列表</span>
+              <div id="fence-cells" class="mono verts-display"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <button id="fenceBackBtn" class="back-btn">← 返回</button>
       <footer class="footer">基于 H3 网格系统 · h3-js</footer>
     </div>
   </div>

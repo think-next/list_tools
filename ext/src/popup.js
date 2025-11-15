@@ -1,4 +1,4 @@
-import { cellToLatLng, latLngToCell, cellToParent, cellToBoundary, cellArea, getHexagonEdgeLengthAvg, gridDisk, UNITS, getResolution } from "../vendor/h3.browser.mjs";
+import { cellToLatLng, latLngToCell, cellToParent, cellToBoundary, cellArea, getHexagonEdgeLengthAvg, gridDisk, UNITS, getResolution, polygonToCells } from "../vendor/h3.browser.mjs";
 
 // 页面路由管理
 class PageRouter {
@@ -6,7 +6,8 @@ class PageRouter {
     this.currentPage = 'homepage';
     this.pages = {
       homepage: document.getElementById('homepage'),
-      'h3-tool': document.getElementById('h3-tool')
+      'h3-tool': document.getElementById('h3-tool'),
+      'fence-tool': document.getElementById('fence-tool')
     };
   }
 
@@ -355,6 +356,17 @@ class H3Tool {
       this.router.goBack();
     });
 
+    // 围栏计算现在在同一个页面内，不需要单独的返回按钮逻辑
+    // 保留代码以防将来需要独立页面
+    const fenceBackBtn = document.getElementById('fenceBackBtn');
+    if (fenceBackBtn) {
+      fenceBackBtn.addEventListener('click', () => {
+        // 如果围栏计算是独立页面，返回到 h3-tool 页面
+        this.router.showPage('h3-tool');
+        this.switchTab('coord');
+      });
+    }
+
     // 键盘导航
     document.addEventListener('keydown', (e) => {
       if (this.router.currentPage === 'homepage') {
@@ -604,23 +616,27 @@ class H3Tool {
 
     // 经纬度输入验证
     if (latlngInput) {
-      latlngInput.addEventListener("input", (e) => {
-        // 只允许数字、逗号、空格、小数点、负号
-        const validPattern = /^[0-9\s,.-]*$/;
-        if (!validPattern.test(e.target.value)) {
-          // 移除非法字符
-          e.target.value = e.target.value.replace(/[^0-9\s,.-]/g, '');
+      // 允许的字符：数字、中文逗号、英文逗号、空格、小数点、负号
+      const VALID_PATTERN = /^[0-9\s,，.-]*$/;
+      const INVALID_CHARS_PATTERN = /[^0-9\s,，.-]/g;
+
+      // 清理非法字符的函数
+      const sanitizeInput = (value) => {
+        if (!VALID_PATTERN.test(value)) {
+          return value.replace(INVALID_CHARS_PATTERN, '');
         }
+        return value;
+      };
+
+      latlngInput.addEventListener("input", (e) => {
+        e.target.value = sanitizeInput(e.target.value);
         onInput();
       });
 
       // 防止粘贴非法字符
       latlngInput.addEventListener("paste", (e) => {
         setTimeout(() => {
-          const validPattern = /^[0-9\s,.-]*$/;
-          if (!validPattern.test(e.target.value)) {
-            e.target.value = e.target.value.replace(/[^0-9\s,.-]/g, '');
-          }
+          e.target.value = sanitizeInput(e.target.value);
         }, 0);
       });
     }
@@ -643,10 +659,12 @@ class H3Tool {
   setupTabEvents() {
     const coordTab = document.getElementById('coordTab');
     const gridTab = document.getElementById('gridTab');
+    const fenceTab = document.getElementById('fenceTab');
     const coordSection = document.getElementById('coordSection');
     const gridSection = document.getElementById('gridSection');
+    const fenceSection = document.getElementById('fenceSection');
 
-    if (!coordTab || !gridTab || !coordSection || !gridSection) return;
+    if (!coordTab || !gridTab || !fenceTab || !coordSection || !gridSection || !fenceSection) return;
 
     // 坐标计算tab点击事件
     coordTab.addEventListener('click', () => {
@@ -657,34 +675,76 @@ class H3Tool {
     gridTab.addEventListener('click', () => {
       this.switchTab('grid');
     });
+
+    // 围栏计算tab点击事件
+    fenceTab.addEventListener('click', () => {
+      this.switchTab('fence');
+    });
   }
 
   switchTab(tabName) {
     const coordTab = document.getElementById('coordTab');
     const gridTab = document.getElementById('gridTab');
+    const fenceTab = document.getElementById('fenceTab');
     const coordSection = document.getElementById('coordSection');
     const gridSection = document.getElementById('gridSection');
+    const fenceSection = document.getElementById('fenceSection');
 
     // 更新tab按钮状态
     coordTab.classList.toggle('active', tabName === 'coord');
     gridTab.classList.toggle('active', tabName === 'grid');
+    fenceTab.classList.toggle('active', tabName === 'fence');
 
     // 更新输入区域显示
     coordSection.classList.toggle('active-tab', tabName === 'coord');
     gridSection.classList.toggle('active-tab', tabName === 'grid');
+    fenceSection.classList.toggle('active-tab', tabName === 'fence');
+
+    // 更新结果区域显示
+    const gridInfoSection = document.querySelector('.result-section:first-of-type');
+    const fenceResultSection = document.getElementById('fence-result-section');
+    const ringSection = document.getElementById('ring-section');
+
+    if (tabName === 'fence') {
+      // 围栏计算tab：显示围栏结果，隐藏网格信息
+      if (fenceResultSection) {
+        fenceResultSection.style.display = 'block';
+      }
+      if (gridInfoSection && gridInfoSection.id !== 'fence-result-section') {
+        gridInfoSection.style.display = 'none';
+      }
+      if (ringSection) {
+        ringSection.style.display = 'none';
+      }
+    } else {
+      // 坐标计算或网格计算tab：显示网格信息，隐藏围栏结果
+      if (gridInfoSection && gridInfoSection.id !== 'fence-result-section') {
+        gridInfoSection.style.display = 'block';
+      }
+      if (fenceResultSection) {
+        fenceResultSection.style.display = 'none';
+      }
+      // ringSection 的显示由 compute() 方法控制
+    }
 
     // 更新当前tab状态
     this.currentTab = tabName;
 
     // 清空错误信息
-    document.getElementById('error').hidden = true;
-    document.getElementById('gridError').hidden = true;
+    const errorEl = document.getElementById('error');
+    const gridErrorEl = document.getElementById('gridError');
+    const fenceErrorEl = document.getElementById('fenceError');
+    if (errorEl) errorEl.hidden = true;
+    if (gridErrorEl) gridErrorEl.hidden = true;
+    if (fenceErrorEl) fenceErrorEl.hidden = true;
 
     // 根据tab切换计算结果
     if (tabName === 'coord') {
       this.compute();
-    } else {
+    } else if (tabName === 'grid') {
       this.computeGrid();
+    } else if (tabName === 'fence') {
+      this.computeFence();
     }
   }
 
@@ -700,11 +760,31 @@ class H3Tool {
       h3IndexInput.value = "8a1fb46622dffff";
     }
 
+    // 初始化围栏计算输入事件
+    const fenceInput = document.getElementById('fenceInput');
+    const fenceResInput = document.getElementById('fenceRes');
+    if (fenceInput) {
+      fenceInput.addEventListener('input', () => {
+        if (this.currentTab === 'fence') {
+          this.computeFence();
+        }
+      });
+    }
+    if (fenceResInput) {
+      fenceResInput.addEventListener('input', () => {
+        if (this.currentTab === 'fence') {
+          this.computeFence();
+        }
+      });
+    }
+
     // 根据当前tab计算
     if (this.currentTab === 'coord') {
       this.compute();
-    } else {
+    } else if (this.currentTab === 'grid') {
       this.computeGrid();
+    } else if (this.currentTab === 'fence') {
+      this.computeFence();
     }
   }
 
@@ -717,11 +797,20 @@ class H3Tool {
       throw new Error("请输入经纬度");
     }
 
-    // 按逗号分割并去除前后空格
-    const parts = latlngStr.split(',').map(part => part.trim());
+    // 支持多种分隔符：中文逗号、英文逗号、空格
+    // 先统一替换中文逗号为英文逗号，然后按逗号或空格分割
+    let normalizedStr = latlngStr.replace(/，/g, ','); // 中文逗号替换为英文逗号
+
+    // 尝试按逗号分割
+    let parts = normalizedStr.split(',').map(part => part.trim()).filter(part => part.length > 0);
+
+    // 如果没有逗号，尝试按空格分割（处理连续空格）
+    if (parts.length === 1) {
+      parts = normalizedStr.split(/\s+/).filter(part => part.length > 0);
+    }
 
     if (parts.length !== 2) {
-      throw new Error("请输入格式：经度,纬度");
+      throw new Error("请输入格式：经度,纬度 或 经度 纬度（支持中文逗号、英文逗号或空格分隔）");
     }
 
     const lng = parseFloat(parts[0]);
@@ -768,23 +857,10 @@ class H3Tool {
       const edgeLen = getHexagonEdgeLengthAvg(res, UNITS.m);
       const area = cellArea(cell, UNITS.m2);
       const radius = this.calculateCircleRadius(area);
-      // 计算该单元的最长/最短边长与半径
+      // 计算该单元的最长/最短边长
       const edgeStats = this.calculateEdgeStats(boundary);
-      // 半径需要用中心点(lat, lng)，谨防经纬度顺序颠倒
-      const radiusStats = this.calculateRadiusStats([cLat, cLng], boundary);
       document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m (最长: ${edgeStats.max.toFixed(2)} m, 最短: ${edgeStats.min.toFixed(2)} m)`;
       document.getElementById('hex-area').textContent = `${area.toFixed(2)} m² (半径: ${radius.toFixed(1)} m)`;
-      const radiusVertexEl = document.getElementById('radius-vertex');
-      if (radiusVertexEl) {
-        radiusVertexEl.textContent = `最长: ${Math.round(radiusStats.max)} m, 最短: ${Math.round(radiusStats.min)} m`;
-      }
-
-      // 计算内切半径（边心半径，近似：边中点与中心的距离，取最长/最短）
-      const inStats = this.calculateInradiusStats([cLat, cLng], boundary);
-      const radiusInEl = document.getElementById('radius-inradius');
-      if (radiusInEl) {
-        radiusInEl.textContent = `最长: ${Math.round(inStats.max)} m, 最短: ${Math.round(inStats.min)} m`;
-      }
 
       const result = {
         input: { lat, lng, res, ring },
@@ -868,9 +944,8 @@ class H3Tool {
       const edgeLen = getHexagonEdgeLengthAvg(res, UNITS.m);
       const area = cellArea(h3Index, UNITS.m2);
       const radius = this.calculateCircleRadius(area);
-      // 计算该单元的最长/最短边长与半径
+      // 计算该单元的最长/最短边长
       const edgeStats = this.calculateEdgeStats(boundary);
-      const radiusStats = this.calculateRadiusStats([lat, lng], boundary);
 
       // 更新显示
       document.getElementById('cell').textContent = h3Index;
@@ -879,15 +954,6 @@ class H3Tool {
       document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m (最长: ${edgeStats.max.toFixed(2)} m, 最短: ${edgeStats.min.toFixed(2)} m)`;
       document.getElementById('hex-area').textContent = `${area.toFixed(2)} m² (半径: ${radius.toFixed(1)} m)`;
       document.getElementById('vertsText').textContent = vertsPairs.join(';');
-      const radiusVertexEl = document.getElementById('radius-vertex');
-      if (radiusVertexEl) {
-        radiusVertexEl.textContent = `最长: ${Math.round(radiusStats.max)} m, 最短: ${Math.round(radiusStats.min)} m`;
-      }
-      const inStats = this.calculateInradiusStats([lat, lng], boundary);
-      const radiusInEl = document.getElementById('radius-inradius');
-      if (radiusInEl) {
-        radiusInEl.textContent = `最长: ${Math.round(inStats.max)} m, 最短: ${Math.round(inStats.min)} m`;
-      }
 
       // 隐藏扩圈信息（网格计算模式下不显示）
       document.getElementById('ring-section').style.display = 'none';
@@ -993,10 +1059,6 @@ class H3Tool {
     document.getElementById('edge-length').textContent = '';
     document.getElementById('hex-area').textContent = '';
     document.getElementById('vertsText').textContent = '';
-    const radiusVertexEl = document.getElementById('radius-vertex');
-    if (radiusVertexEl) radiusVertexEl.textContent = '';
-    const radiusInEl = document.getElementById('radius-inradius');
-    if (radiusInEl) radiusInEl.textContent = '';
     document.getElementById('ring-section').style.display = 'none';
   }
 
@@ -1027,10 +1089,651 @@ class H3Tool {
     });
   }
 
+  // 去重坐标点（基于经纬度精度）
+  deduplicateCoordinates(coordinates) {
+    // coordinates: [[lat, lng], ...]
+    const precision = 1e-6; // 精度阈值：约0.1米
+    const seen = new Set();
+    const unique = [];
+
+    for (const [lat, lng] of coordinates) {
+      // 将坐标四舍五入到精度阈值，用于比较
+      const roundedLat = Math.round(lat / precision) * precision;
+      const roundedLng = Math.round(lng / precision) * precision;
+      const key = `${roundedLat},${roundedLng}`;
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push([lat, lng]);
+      }
+    }
+
+    return unique;
+  }
+
+  // 从网格集合中提取边界顶点（方案三：基于网格边界）
+  extractBoundaryFromCells(cellArray) {
+    // New approach: build directed edges for every cell, remove shared edges (those appear in both directions),
+    // then chain remaining directed edges into closed loops. Return the largest closed loop (as [lat,lng] pairs).
+    if (!cellArray || cellArray.length === 0) return [];
+
+    const precision = 1e-6; // rounding precision for keys
+    const coordKey = (lat, lng) => `${Math.round(lat / precision) * precision}:${Math.round(lng / precision) * precision}`;
+
+    // Maps
+    const directedEdges = new Map(); // key: "startKey->endKey" -> { start:[lat,lng], end:[lat,lng] }
+    const undirectedCount = new Map(); // key: "minKey|maxKey" -> count
+
+    // Build edges for all cells
+    for (const cell of cellArray) {
+      let boundary;
+      try {
+        boundary = cellToBoundary(cell); // [[lat, lng], ...]
+      } catch (err) {
+        console.warn('Failed to get boundary for cell:', cell, err);
+        continue;
+      }
+
+      if (!boundary || boundary.length < 2) continue;
+
+      // Iterate edges (closed)
+      for (let i = 0; i < boundary.length; i++) {
+        const a = boundary[i];
+        const b = boundary[(i + 1) % boundary.length];
+        const startLat = a[0], startLng = a[1];
+        const endLat = b[0], endLng = b[1];
+
+        const startKey = coordKey(startLat, startLng);
+        const endKey = coordKey(endLat, endLng);
+        const dirKey = `${startKey}->${endKey}`;
+        const undirKey = startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
+
+        // store directed edge (if duplicates occur, keep one)
+        if (!directedEdges.has(dirKey)) {
+          directedEdges.set(dirKey, { start: [startLat, startLng], end: [endLat, endLng] });
+        }
+
+        undirectedCount.set(undirKey, (undirectedCount.get(undirKey) || 0) + 1);
+      }
+    }
+
+    // Keep only directed edges whose undirected count == 1 (i.e., not shared)
+    const boundaryDirected = new Map(); // startKey -> array of endKey
+    const directedEdgeCoords = new Map(); // dirKey -> {start,end}
+    for (const [dirKey, edge] of directedEdges.entries()) {
+      const [startKey, endKey] = dirKey.split('->');
+      const undirKey = startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
+      const count = undirectedCount.get(undirKey) || 0;
+      if (count === 1) {
+        // boundary edge
+        directedEdgeCoords.set(dirKey, edge);
+        if (!boundaryDirected.has(startKey)) boundaryDirected.set(startKey, []);
+        boundaryDirected.get(startKey).push(endKey);
+      }
+    }
+
+    if (directedEdgeCoords.size === 0) return [];
+
+    // Chain edges into closed loops. We'll extract all loops and choose the largest by vertex count.
+    const loops = [];
+    const usedDirKeys = new Set();
+
+    // Helper to find dirKey from startKey and endKey
+    const makeDirKey = (s, e) => `${s}->${e}`;
+
+    for (const dirKey of directedEdgeCoords.keys()) {
+      if (usedDirKeys.has(dirKey)) continue;
+
+      // start a new loop
+      const edge = directedEdgeCoords.get(dirKey);
+      const startKey = coordKey(edge.start[0], edge.start[1]);
+      const loopCoords = [];
+
+      let currentStartKey = startKey;
+      let safety = 0;
+      let closed = false;
+
+      while (safety++ < 100000) {
+        const ends = boundaryDirected.get(currentStartKey);
+        if (!ends || ends.length === 0) break; // dead end -> abort this chain
+
+        // pick the first unused end
+        let nextEndKey = null;
+        for (const candidate of ends) {
+          const candidateDir = makeDirKey(currentStartKey, candidate);
+          if (!usedDirKeys.has(candidateDir) && directedEdgeCoords.has(candidateDir)) {
+            nextEndKey = candidate;
+            break;
+          }
+        }
+
+        if (!nextEndKey) break; // no unused outgoing edge
+
+        // push current start coordinate
+        const currentEdgeKey = makeDirKey(currentStartKey, nextEndKey);
+        const currentEdge = directedEdgeCoords.get(currentEdgeKey);
+        if (!currentEdge) break;
+
+        loopCoords.push(currentEdge.start);
+        usedDirKeys.add(currentEdgeKey);
+
+        // if we reached back to loop start, close
+        if (nextEndKey === startKey) {
+          // add the end point to close
+          loopCoords.push(currentEdge.end);
+          closed = true;
+          break;
+        }
+
+        // advance
+        currentStartKey = nextEndKey;
+      }
+
+      if (closed && loopCoords.length >= 4) {
+        // ensure first equals last
+        const first = loopCoords[0];
+        const last = loopCoords[loopCoords.length - 1];
+        if (first[0] !== last[0] || first[1] !== last[1]) {
+          loopCoords.push([first[0], first[1]]);
+        }
+        loops.push(loopCoords);
+      }
+    }
+
+    if (loops.length === 0) return [];
+
+    // choose the largest loop (by number of vertices)
+    loops.sort((a, b) => b.length - a.length);
+    const mainLoop = loops[0];
+
+    // Optionally deduplicate closely similar consecutive vertices
+    const deduped = this.deduplicateCoordinates(mainLoop);
+    // ensure closed
+    if (deduped.length > 0) {
+      const first = deduped[0];
+      const last = deduped[deduped.length - 1];
+      if (first[0] !== last[0] || first[1] !== last[1]) {
+        deduped.push([first[0], first[1]]);
+      }
+    }
+
+    return deduped;
+  }
+
+  // 分层提取并拼接蜂窝围栏（不修改现有业务流程；可被调用以获取拼接链）
+  // 输入: cellArray - Array of H3 cell ids
+  // 输出: 一个坐标数组 (array of [lat,lng]) 表示拼接后的围栏链（outer -> connectors -> inner -> ...）
+  buildHoneycombFenceFromCells(cellArray) {
+    if (!cellArray || cellArray.length === 0) return [];
+
+    const precision = 1e-6;
+    const coordKey = (lat, lng) => `${Math.round(lat / precision) * precision}:${Math.round(lng / precision) * precision}`;
+
+    // build edge index for a set of cells
+    const buildEdgeIndex = (cells) => {
+      const cellEdges = new Map(); // cell -> [{undirKey, start, end}]
+      const undirToCells = new Map(); // undirKey -> Set of cells
+
+      for (const cell of cells) {
+        let boundary;
+        try {
+          boundary = cellToBoundary(cell);
+        } catch (e) {
+          continue;
+        }
+        if (!boundary || boundary.length < 2) continue;
+
+        const edges = [];
+        for (let i = 0; i < boundary.length; i++) {
+          const a = boundary[i];
+          const b = boundary[(i + 1) % boundary.length];
+          const aCoord = [a[0], a[1]]; // [lat,lng]
+          const bCoord = [b[0], b[1]];
+          const aKey = coordKey(aCoord[0], aCoord[1]);
+          const bKey = coordKey(bCoord[0], bCoord[1]);
+          const undirKey = aKey < bKey ? `${aKey}|${bKey}` : `${bKey}|${aKey}`;
+          edges.push({ undirKey, start: aCoord, end: bCoord });
+
+          if (!undirToCells.has(undirKey)) undirToCells.set(undirKey, new Set());
+          undirToCells.get(undirKey).add(cell);
+        }
+        cellEdges.set(cell, edges);
+      }
+
+      return { cellEdges, undirToCells };
+    };
+
+    // full index for lookup during stitching
+    const fullIndex = buildEdgeIndex(cellArray);
+
+    // iterative layered extraction
+    const layers = [];
+    let remaining = new Set(cellArray);
+    const proximityThresholdMeters = 5; // fallback match threshold
+
+    while (remaining.size > 0) {
+      const remList = Array.from(remaining);
+      // extract outer boundary using existing robust extractor
+      const boundaryCoords = this.extractBoundaryFromCells(remList);
+      if (!boundaryCoords || boundaryCoords.length === 0) break;
+
+      // build index for current remaining cells
+      const idx = buildEdgeIndex(remList);
+
+      // derive undirected keys for consecutive coordinate pairs from boundaryCoords
+      const outerUndirKeys = new Set();
+      for (let i = 0; i < boundaryCoords.length - 1; i++) {
+        const a = boundaryCoords[i];
+        const b = boundaryCoords[i + 1];
+        const aKey = coordKey(a[0], a[1]);
+        const bKey = coordKey(b[0], b[1]);
+        const undirKey = aKey < bKey ? `${aKey}|${bKey}` : `${bKey}|${aKey}`;
+        outerUndirKeys.add(undirKey);
+      }
+
+      // collect contributing cells by direct key lookup
+      const contributing = new Set();
+      for (const uk of outerUndirKeys) {
+        const set = idx.undirToCells.get(uk);
+        if (set) for (const c of set) contributing.add(c);
+      }
+
+      // fallback: proximity-based matching when direct lookup fails
+      if (contributing.size === 0) {
+        try {
+          // iterate each boundary edge and try to find matching undirKey by endpoint proximity
+          const allUndirKeys = Array.from(idx.undirToCells.keys());
+          for (let i = 0; i < boundaryCoords.length - 1; i++) {
+            const a = boundaryCoords[i];
+            const b = boundaryCoords[i + 1];
+            for (const uk of allUndirKeys) {
+              const parts = uk.split('|');
+              if (parts.length !== 2) continue;
+              const parseKey = (k) => {
+                const [latS, lngS] = k.split(':');
+                return [parseFloat(latS), parseFloat(lngS)];
+              };
+              const p = parseKey(parts[0]);
+              const q = parseKey(parts[1]);
+              // check both orientations
+              const d1 = this.haversineDistanceMeters(a[0], a[1], p[0], p[1]);
+              const d2 = this.haversineDistanceMeters(b[0], b[1], q[0], q[1]);
+              const d3 = this.haversineDistanceMeters(a[0], a[1], q[0], q[1]);
+              const d4 = this.haversineDistanceMeters(b[0], b[1], p[0], p[1]);
+              if ((d1 <= proximityThresholdMeters && d2 <= proximityThresholdMeters) || (d3 <= proximityThresholdMeters && d4 <= proximityThresholdMeters)) {
+                const set = idx.undirToCells.get(uk);
+                if (set) for (const c of set) contributing.add(c);
+              }
+            }
+          }
+        } catch (e) {
+          // ignore proximity errors
+        }
+      }
+
+      if (contributing.size === 0) {
+        // cannot map this outer boundary to cells reliably -> stop layering
+        break;
+      }
+
+      layers.push({ coords: boundaryCoords, edgeKeys: outerUndirKeys, cells: contributing });
+
+      // remove contributing cells from remaining
+      for (const c of contributing) remaining.delete(c);
+    }
+
+    if (layers.length === 0) return [];
+
+    // Stitch layers in a simple way: append outermost then each inner layer in order.
+    // This keeps the behavior minimal and non-invasive (no connector matching).
+    const finalChain = [];
+    const appendNoDup = (coords) => {
+      for (const p of coords) {
+        if (finalChain.length === 0) finalChain.push(p);
+        else {
+          const last = finalChain[finalChain.length - 1];
+          if (Math.abs(last[0] - p[0]) > precision || Math.abs(last[1] - p[1]) > precision) finalChain.push(p);
+        }
+      }
+    };
+
+    // append layers sequentially: outer -> inner -> inner2 -> ...
+    for (let i = 0; i < layers.length; i++) {
+      appendNoDup(layers[i].coords);
+    }
+
+    return finalChain;
+  }
+
+  // 将顶点排序形成闭合多边形（按极角排序）
+  sortVerticesToPolygon(vertices) {
+    if (vertices.length === 0) {
+      return [];
+    }
+    if (vertices.length <= 3) {
+      // 如果顶点数少于等于3个，直接返回并确保闭合
+      const result = [...vertices];
+      if (result.length > 0) {
+        const first = result[0];
+        const last = result[result.length - 1];
+        if (first[0] !== last[0] || first[1] !== last[1]) {
+          result.push([first[0], first[1]]);
+        }
+      }
+      return result;
+    }
+
+    // 计算所有顶点的中心点
+    let centerLat = 0;
+    let centerLng = 0;
+    for (const [lat, lng] of vertices) {
+      centerLat += lat;
+      centerLng += lng;
+    }
+    centerLat /= vertices.length;
+    centerLng /= vertices.length;
+
+    // 按极角排序（相对于中心点）
+    const sorted = [...vertices].sort((a, b) => {
+      const angleA = Math.atan2(a[0] - centerLat, a[1] - centerLng);
+      const angleB = Math.atan2(b[0] - centerLat, b[1] - centerLng);
+      return angleA - angleB;
+    });
+
+    // 确保多边形闭合（首尾点相同）
+    if (sorted.length > 0) {
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+      if (first[0] !== last[0] || first[1] !== last[1]) {
+        sorted.push([first[0], first[1]]);
+      }
+    }
+
+    return sorted;
+  }
+
   showError(msg) {
     const errorEl = document.getElementById('error');
     errorEl.textContent = msg;
     errorEl.hidden = !msg;
+  }
+
+  initFenceTool() {
+    // 围栏计算现在在同一个页面内，初始化逻辑已在 initH3Tool 中处理
+    // 这个方法保留用于兼容性，但主要逻辑已移到 initH3Tool
+    this.computeFence();
+  }
+
+  computeFence() {
+    try {
+      const fenceInput = document.getElementById('fenceInput');
+      const fenceResInput = document.getElementById('fenceRes');
+      const fenceError = document.getElementById('fenceError');
+
+      if (!fenceInput || !fenceResInput) return;
+
+      const fenceText = fenceInput.value.trim();
+      const res = parseInt(fenceResInput.value, 10);
+
+      // 清空错误
+      if (fenceError) {
+        fenceError.hidden = true;
+      }
+
+      if (!fenceText) {
+        this.clearFenceResults();
+        return;
+      }
+
+      if (!Number.isFinite(res) || res < 0 || res > 15) {
+        this.showFenceError('网格级别应在 0 到 15');
+        return;
+      }
+
+      // 解析坐标点：按分号分隔
+      const points = fenceText.split(';').map(point => point.trim()).filter(point => point.length > 0);
+      if (points.length < 3) {
+        this.showFenceError('至少需要3个坐标点才能构成围栏');
+        return;
+      }
+
+      const coordinates = [];
+      for (const point of points) {
+        // 支持中文逗号，统一替换为英文逗号
+        let normalizedStr = point.replace(/，/g, ',');
+        let parts = normalizedStr.split(',').map(part => part.trim()).filter(part => part.length > 0);
+
+        // 如果没有逗号，尝试按空格分割
+        if (parts.length === 1) {
+          parts = normalizedStr.split(/\s+/).filter(part => part.length > 0);
+        }
+
+        if (parts.length !== 2) {
+          this.showFenceError(`坐标格式错误：${point}，应为"经度,纬度"`);
+          return;
+        }
+
+        const lng = parseFloat(parts[0]);
+        const lat = parseFloat(parts[1]);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          this.showFenceError(`无效的坐标：${point}`);
+          return;
+        }
+
+        if (lat < -90 || lat > 90) {
+          this.showFenceError(`纬度范围应在 -90 到 90：${point}`);
+          return;
+        }
+
+        if (lng < -180 || lng > 180) {
+          this.showFenceError(`经度范围应在 -180 到 180：${point}`);
+          return;
+        }
+
+        // 使用 GeoJSON 格式 [lng, lat]
+        coordinates.push([lng, lat]);
+      }
+
+      // 确保多边形闭合（第一个点和最后一个点相同）
+      if (coordinates.length > 0) {
+        const firstPoint = coordinates[0];
+        const lastPoint = coordinates[coordinates.length - 1];
+        if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
+          coordinates.push([firstPoint[0], firstPoint[1]]);
+        }
+      }
+
+      // 使用 polygonToCells 计算覆盖围栏的所有网格
+      // polygonToCells 接受 GeoJSON 格式的坐标数组 [lng, lat]
+      // isGeoJson = true 表示使用 GeoJSON 格式（经度在前，纬度在后）
+      // 返回所有中心点在多边形内的H3网格索引
+      const cellArray = polygonToCells(coordinates, res, true);
+
+      // 计算所有网格的顶点坐标并去重
+      const allVertexCoords = [];
+      for (const cell of cellArray) {
+        // cellToBoundary 返回 [[lat, lng], ...]
+        const boundary = cellToBoundary(cell);
+        for (const [lat, lng] of boundary) {
+          allVertexCoords.push([lat, lng]);
+        }
+      }
+
+      // 去重处理
+      const uniqueVerts = this.deduplicateCoordinates(allVertexCoords);
+      const uniqueVertsPairs = uniqueVerts
+        .map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
+      const uniqueVertsText = uniqueVertsPairs.join(';');
+
+      // 更新显示
+      const cellCountEl = document.getElementById('fence-cell-count');
+      const cellsEl = document.getElementById('fence-cells');
+      const fenceAllVertexCoordsEl = document.getElementById('fence-all-vertex-coords');
+
+      if (cellCountEl) {
+        cellCountEl.textContent = `${cellArray.length} 个网格`;
+      }
+
+      if (cellsEl) {
+        // 限制显示长度
+        const cellsText = cellArray.join(',');
+        const maxDisplayLength = 200;
+        const displayText = cellsText.length > maxDisplayLength
+          ? cellsText.substring(0, maxDisplayLength) + '...'
+          : cellsText;
+        cellsEl.textContent = displayText;
+      }
+
+      // 显示所有顶点坐标
+      if (fenceAllVertexCoordsEl) {
+        const maxDisplayLength = 200;
+        const displayText = uniqueVertsText.length > maxDisplayLength
+          ? uniqueVertsText.substring(0, maxDisplayLength) + '...'
+          : uniqueVertsText;
+        fenceAllVertexCoordsEl.textContent = displayText;
+      }
+
+      // 设置复制按钮功能
+      this.setupFenceVertexCoordsCopyButton(uniqueVertsText);
+
+      // 边界提取：找出边界网格并提取边界顶点
+      const boundaryCoords = this.extractBoundaryFromCells(cellArray);
+      const boundaryCoordsPairs = boundaryCoords
+        .map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
+      const boundaryCoordsText = boundaryCoordsPairs.join(';');
+
+      // 显示边界提取结果
+      const fenceBoundaryCoordsEl = document.getElementById('fence-boundary-coords');
+      if (fenceBoundaryCoordsEl) {
+        const maxDisplayLength = 200;
+        const displayText = boundaryCoordsText.length > maxDisplayLength
+          ? boundaryCoordsText.substring(0, maxDisplayLength) + '...'
+          : boundaryCoordsText;
+        fenceBoundaryCoordsEl.textContent = displayText;
+      }
+
+      // 设置边界坐标复制按钮功能
+      this.setupFenceBoundaryCoordsCopyButton(boundaryCoordsText);
+
+      // 构建并显示蜂窝围栏（每条线段属于单个网格，不跨网格）
+      try {
+        const honeycombChain = this.buildHoneycombFenceFromCells(cellArray);
+        const honeycombText = (honeycombChain && honeycombChain.length > 0)
+          ? honeycombChain.map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join(';')
+          : '';
+        const honeycombEl = document.getElementById('fence-honeycomb-coords');
+        if (honeycombEl) {
+          const maxDisplayLength = 200;
+          const displayText = honeycombText.length > maxDisplayLength
+            ? honeycombText.substring(0, maxDisplayLength) + '...'
+            : honeycombText;
+          honeycombEl.textContent = displayText;
+        }
+
+        const copyHoneyBtn = document.getElementById('copyFenceHoneycombBtn');
+        if (copyHoneyBtn) {
+          copyHoneyBtn.style.display = '';
+          copyHoneyBtn.replaceWith(copyHoneyBtn.cloneNode(true));
+          const newBtn = document.getElementById('copyFenceHoneycombBtn');
+          newBtn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(honeycombText);
+              const original = newBtn.textContent;
+              newBtn.textContent = '✓';
+              newBtn.style.background = 'var(--ok)';
+              setTimeout(() => {
+                newBtn.textContent = original;
+                newBtn.style.background = 'var(--accent)';
+              }, 1000);
+            } catch (e) {
+              console.error('复制蜂窝围栏失败', e);
+              alert('复制失败，请手动复制');
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('蜂窝围栏构建失败', e);
+      }
+
+    } catch (err) {
+      this.showFenceError(String(err.message || err));
+    }
+  }
+
+  showFenceError(msg) {
+    const errorEl = document.getElementById('fenceError');
+    if (errorEl) {
+      errorEl.textContent = msg;
+      errorEl.hidden = false;
+    }
+    this.clearFenceResults();
+  }
+
+  setupFenceVertexCoordsCopyButton(coordsText) {
+    const copyBtn = document.getElementById('copyFenceVertexCoordsBtn');
+    if (!copyBtn) return;
+
+    // 移除之前的事件监听器
+    copyBtn.replaceWith(copyBtn.cloneNode(true));
+    const newCopyBtn = document.getElementById('copyFenceVertexCoordsBtn');
+
+    newCopyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(coordsText);
+        // 临时改变按钮文本显示复制成功
+        const originalText = newCopyBtn.textContent;
+        newCopyBtn.textContent = '✓';
+        newCopyBtn.style.background = 'var(--ok)';
+
+        setTimeout(() => {
+          newCopyBtn.textContent = originalText;
+          newCopyBtn.style.background = 'var(--accent)';
+        }, 1000);
+      } catch (err) {
+        console.error('复制失败:', err);
+        alert('复制失败，请手动选择文本复制');
+      }
+    });
+  }
+
+  setupFenceBoundaryCoordsCopyButton(coordsText) {
+    const copyBtn = document.getElementById('copyFenceBoundaryCoordsBtn');
+    if (!copyBtn) return;
+
+    // 移除之前的事件监听器
+    copyBtn.replaceWith(copyBtn.cloneNode(true));
+    const newCopyBtn = document.getElementById('copyFenceBoundaryCoordsBtn');
+
+    newCopyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(coordsText);
+        // 临时改变按钮文本显示复制成功
+        const originalText = newCopyBtn.textContent;
+        newCopyBtn.textContent = '✓';
+        newCopyBtn.style.background = 'var(--ok)';
+
+        setTimeout(() => {
+          newCopyBtn.textContent = originalText;
+          newCopyBtn.style.background = 'var(--accent)';
+        }, 1000);
+      } catch (err) {
+        console.error('复制失败:', err);
+        alert('复制失败，请手动选择文本复制');
+      }
+    });
+  }
+
+  clearFenceResults() {
+    const cellCountEl = document.getElementById('fence-cell-count');
+    const cellsEl = document.getElementById('fence-cells');
+    const fenceAllVertexCoordsEl = document.getElementById('fence-all-vertex-coords');
+    const fenceBoundaryCoordsEl = document.getElementById('fence-boundary-coords');
+
+    if (cellCountEl) cellCountEl.textContent = '';
+    if (cellsEl) cellsEl.textContent = '';
+    if (fenceAllVertexCoordsEl) fenceAllVertexCoordsEl.textContent = '';
+    if (fenceBoundaryCoordsEl) fenceBoundaryCoordsEl.textContent = '';
   }
 
 }
