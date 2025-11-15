@@ -165,6 +165,12 @@ body {
     align-items: end;
 }
 
+/* Add a bit more vertical spacing specifically for grid and fence input rows */
+#gridSection .input-row,
+#fenceSection .input-row {
+    margin-bottom: 12px;
+}
+
 .main-field {
     flex: 1;
 }
@@ -344,6 +350,94 @@ input[type="range"] {
     padding: 8px 4px;
 }
 
+/* Fence result: make multi-line value blocks left-aligned and visually consistent */
+#fence-result-section .row,
+#fence-result-section .verts-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    justify-content: flex-start;
+    /* ensure label and value are left-aligned */
+}
+
+#fence-result-section .row .label {
+    min-width: 120px;
+    /* slightly wider label for alignment */
+    margin-right: 8px;
+    text-align: left;
+}
+
+#fence-result-section .vertex-coords-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+    /* allow flex children to shrink properly */
+}
+
+#fence-result-section .vertex-coords-container .verts-display {
+    flex: 1 1 auto;
+    text-align: left;
+    background: transparent;
+    /* keep clean visual; border kept by container if needed */
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 8px 10px;
+    border-radius: 8px;
+    min-height: 42px;
+    color: var(--text);
+    word-break: break-word;
+}
+
+/* Make the simple fence list (覆盖网格列表) use the same visual style as other verts displays */
+#fence-result-section .verts-row>.verts-display,
+#fence-result-section #fence-cells {
+    flex: 1 1 auto;
+    text-align: left;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 8px 10px;
+    border-radius: 8px;
+    min-height: 42px;
+    color: var(--text);
+    word-break: break-word;
+}
+
+#fence-result-section .vertex-coords-container .copy-btn {
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    border-radius: 8px;
+}
+
+/* Make nested rows within fence results simpler (no alternating background) */
+#fence-result-section .row:nth-child(odd),
+#fence-result-section .verts-row:nth-child(odd) {
+    background: transparent;
+    padding: 6px 4px;
+}
+
+/* Add subtle separators between fence result items for better visual separation */
+#fence-result-section .row,
+#fence-result-section .verts-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 10px 6px;
+}
+
+/* Ensure fence result boxes keep their visual framing even when empty */
+#fence-result-section .verts-display:empty,
+#fence-result-section #fence-cells:empty {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 8px 10px;
+    min-height: 42px;
+    color: var(--muted);
+}
+
+#fence-result-section .row:last-child,
+#fence-result-section .verts-row:last-child {
+    border-bottom: none;
+}
+
 .row.two {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -446,6 +540,20 @@ input[type="range"] {
     margin-bottom: 4px;
     min-width: 100px;
     text-align: left;
+}
+
+/* Empty-state: make result displays cleaner when there's no content */
+.result-section .verts-display:empty {
+    background: transparent;
+    border: none;
+    padding: 4px 0;
+    min-height: 0;
+    color: var(--muted);
+}
+
+/* Hide copy buttons next to empty result boxes for a cleaner look */
+.vertex-coords-container .verts-display:empty+.copy-btn {
+    display: none;
 }
 
 

@@ -181,6 +181,22 @@
                 <button id="copyVertexCoordsBtn" class="copy-btn" title="复制所有顶点坐标">📋</button>
               </div>
             </div>
+
+            <!-- 边界提取 & 蜂窝围栏（参考围栏计算） -->
+            <div class="row verts-row">
+              <span class="label">边界提取</span>
+              <div class="vertex-coords-container">
+                <div id="ring-boundary-coords" class="mono verts-display"></div>
+                <button id="copyRingBoundaryCoordsBtn" class="copy-btn" title="复制边界坐标">📋</button>
+              </div>
+            </div>
+            <div class="row verts-row">
+              <span class="label">蜂窝围栏</span>
+              <div class="vertex-coords-container">
+                <div id="ring-honeycomb-coords" class="mono verts-display"></div>
+                <button id="copyRingHoneycombBtn" class="copy-btn" title="复制蜂窝围栏坐标">📋</button>
+              </div>
+            </div>
           </div>
 
           <!-- 围栏计算结果 -->
@@ -192,7 +208,10 @@
             </div>
             <div class="row verts-row">
               <span class="label">覆盖网格列表</span>
-              <div id="fence-cells" class="mono verts-display"></div>
+              <div class="vertex-coords-container">
+                <div id="fence-cells" class="mono verts-display"></div>
+                <button id="copyFenceCellsBtn" class="copy-btn" title="复制覆盖网格列表">📋</button>
+              </div>
             </div>
             <div class="row verts-row">
               <span class="label">所有顶点坐标</span>

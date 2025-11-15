@@ -906,6 +906,63 @@ class H3Tool {
 
         // 设置复制按钮功能（复制完整数据）
         this.setupVertexCoordsCopyButton(fullCoordsText);
+
+        // 边界提取（复用围栏的 extractBoundaryFromCells）
+        try {
+          const ringBoundaryCoords = this.extractBoundaryFromCells(ringCells);
+          const ringBoundaryPairs = ringBoundaryCoords.map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
+          const ringBoundaryText = ringBoundaryPairs.join(';');
+          const ringBoundaryEl = document.getElementById('ring-boundary-coords');
+          if (ringBoundaryEl) {
+            const maxDisplayLength = 200;
+            const displayText = ringBoundaryText.length > maxDisplayLength
+              ? ringBoundaryText.substring(0, maxDisplayLength) + '...'
+              : ringBoundaryText;
+            ringBoundaryEl.textContent = displayText;
+          }
+          this.setupFenceBoundaryCoordsCopyButton(ringBoundaryText);
+        } catch (e) {
+          console.warn('ring boundary extract failed', e);
+        }
+
+        // 蜂窝围栏（复用 buildHoneycombFenceFromCells）
+        try {
+          const ringHoneycomb = this.buildHoneycombFenceFromCells(ringCells);
+          const ringHoneyText = (ringHoneycomb && ringHoneycomb.length)
+            ? ringHoneycomb.map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join(';')
+            : '';
+          const ringHoneyEl = document.getElementById('ring-honeycomb-coords');
+          if (ringHoneyEl) {
+            const maxDisplayLength = 200;
+            const displayText = ringHoneyText.length > maxDisplayLength
+              ? ringHoneyText.substring(0, maxDisplayLength) + '...'
+              : ringHoneyText;
+            ringHoneyEl.textContent = displayText;
+          }
+          const copyRingHoneyBtn = document.getElementById('copyRingHoneycombBtn');
+          if (copyRingHoneyBtn) {
+            copyRingHoneyBtn.style.display = '';
+            copyRingHoneyBtn.replaceWith(copyRingHoneyBtn.cloneNode(true));
+            const newBtn = document.getElementById('copyRingHoneycombBtn');
+            newBtn.addEventListener('click', async () => {
+              try {
+                await navigator.clipboard.writeText(ringHoneyText);
+                const original = newBtn.textContent;
+                newBtn.textContent = '✓';
+                newBtn.style.background = 'var(--ok)';
+                setTimeout(() => {
+                  newBtn.textContent = original;
+                  newBtn.style.background = 'var(--accent)';
+                }, 1000);
+              } catch (err) {
+                console.error('复制ring蜂窝围栏失败', err);
+                alert('复制失败，请手动复制');
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('ring honeycomb failed', e);
+        }
       } else {
         ringSection.style.display = 'none';
       }
@@ -1605,6 +1662,9 @@ class H3Tool {
         cellsEl.textContent = displayText;
       }
 
+      // 设置覆盖网格复制按钮（复制完整的 cells 列表）
+      this.setupFenceCellsCopyButton(cellArray.join(','));
+
       // 显示所有顶点坐标
       if (fenceAllVertexCoordsEl) {
         const maxDisplayLength = 200;
@@ -1739,6 +1799,32 @@ class H3Tool {
         }, 1000);
       } catch (err) {
         console.error('复制失败:', err);
+        alert('复制失败，请手动选择文本复制');
+      }
+    });
+  }
+
+  setupFenceCellsCopyButton(cellsText) {
+    const copyBtn = document.getElementById('copyFenceCellsBtn');
+    if (!copyBtn) return;
+
+    // 移除之前的事件监听器
+    copyBtn.replaceWith(copyBtn.cloneNode(true));
+    const newCopyBtn = document.getElementById('copyFenceCellsBtn');
+
+    newCopyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(cellsText);
+        const originalText = newCopyBtn.textContent;
+        newCopyBtn.textContent = '✓';
+        newCopyBtn.style.background = 'var(--ok)';
+
+        setTimeout(() => {
+          newCopyBtn.textContent = originalText;
+          newCopyBtn.style.background = 'var(--accent)';
+        }, 1000);
+      } catch (err) {
+        console.error('复制覆盖网格列表失败:', err);
         alert('复制失败，请手动选择文本复制');
       }
     });
