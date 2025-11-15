@@ -919,41 +919,61 @@ class H3Tool {
   computeGrid() {
     try {
       const h3IndexInput = document.getElementById('h3Index');
-      const h3Index = h3IndexInput.value.trim();
+      const raw = h3IndexInput.value.trim();
 
-      if (!h3Index) {
+      if (!raw) {
         this.clearResults();
         return;
       }
 
+      // 支持多个索引输入，使用中英文逗号或空白分隔
+      const tokens = raw.split(/[\s,，]+/).map(s => s.trim()).filter(s => s.length > 0);
+
       // 验证H3索引格式
       const h3Pattern = /^[0-9a-fA-F]{8,15}$/;
-      if (!h3Pattern.test(h3Index)) {
-        this.showGridError('请输入有效的H3网格索引格式');
-        return;
+      for (const t of tokens) {
+        if (!h3Pattern.test(t)) {
+          this.showGridError('请输入有效的H3网格索引格式（多个索引请用逗号或空格分隔）');
+          return;
+        }
       }
 
-      // 获取网格信息
+      // 保持现有逻辑：以第一个索引作为主索引来计算中心/父级/面积等信息
+      const h3Index = tokens[0];
+
+      // 获取主网格信息
       const [lat, lng] = cellToLatLng(h3Index); // [lat, lng]
       const res = getResolution(h3Index);
       const parent = res > 0 ? cellToParent(h3Index, res - 1) : null;
-      // 使用默认格式，返回 [lat, lng]
       const boundary = cellToBoundary(h3Index); // [[lat, lng], ...]
-      const vertsPairs = boundary
-        .map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
+      const vertsPairs = boundary.map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
       const edgeLen = getHexagonEdgeLengthAvg(res, UNITS.m);
       const area = cellArea(h3Index, UNITS.m2);
       const radius = this.calculateCircleRadius(area);
-      // 计算该单元的最长/最短边长
       const edgeStats = this.calculateEdgeStats(boundary);
 
-      // 更新显示
+      // 如果输入了多个网格，聚合所有网格的顶点信息用于显示
+      let allVertsPairs = vertsPairs.slice();
+      if (tokens.length > 1) {
+        for (let i = 1; i < tokens.length; i++) {
+          try {
+            const b = cellToBoundary(tokens[i]);
+            const pairs = b.map(([lat, lng]) => `${lng.toFixed(6)},${lat.toFixed(6)}`);
+            allVertsPairs.push(...pairs);
+          } catch (e) {
+            // 忽略个别 cellToBoundary 失败，继续处理其它网格
+            console.warn('Failed to get boundary for cell', tokens[i], e);
+          }
+        }
+      }
+
+      // 更新显示（保持其它字段按第一个索引的计算结果，vertsText 显示全部顶点）
       document.getElementById('cell').textContent = h3Index;
       document.getElementById('center-point').textContent = `${lng.toFixed(6)},${lat.toFixed(6)}`;
       document.getElementById('parent').textContent = parent ? String(parent) : '无';
       document.getElementById('edge-length').textContent = `${edgeLen.toFixed(2)} m (最长: ${edgeStats.max.toFixed(2)} m, 最短: ${edgeStats.min.toFixed(2)} m)`;
       document.getElementById('hex-area').textContent = `${area.toFixed(2)} m² (半径: ${radius.toFixed(1)} m)`;
-      document.getElementById('vertsText').textContent = vertsPairs.join(';');
+      document.getElementById('vertsText').textContent = allVertsPairs.join(';');
 
       // 隐藏扩圈信息（网格计算模式下不显示）
       document.getElementById('ring-section').style.display = 'none';
