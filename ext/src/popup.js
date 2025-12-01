@@ -920,7 +920,7 @@ class H3Tool {
               : ringBoundaryText;
             ringBoundaryEl.textContent = displayText;
           }
-          this.setupFenceBoundaryCoordsCopyButton(ringBoundaryText);
+          this.setupRingBoundaryCoordsCopyButton(ringBoundaryText);
         } catch (e) {
           console.warn('ring boundary extract failed', e);
         }
@@ -1784,6 +1784,33 @@ class H3Tool {
     // 移除之前的事件监听器
     copyBtn.replaceWith(copyBtn.cloneNode(true));
     const newCopyBtn = document.getElementById('copyFenceBoundaryCoordsBtn');
+
+    newCopyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(coordsText);
+        // 临时改变按钮文本显示复制成功
+        const originalText = newCopyBtn.textContent;
+        newCopyBtn.textContent = '✓';
+        newCopyBtn.style.background = 'var(--ok)';
+
+        setTimeout(() => {
+          newCopyBtn.textContent = originalText;
+          newCopyBtn.style.background = 'var(--accent)';
+        }, 1000);
+      } catch (err) {
+        console.error('复制失败:', err);
+        alert('复制失败，请手动选择文本复制');
+      }
+    });
+  }
+
+  setupRingBoundaryCoordsCopyButton(coordsText) {
+    const copyBtn = document.getElementById('copyRingBoundaryCoordsBtn');
+    if (!copyBtn) return;
+
+    // 移除之前的事件监听器
+    copyBtn.replaceWith(copyBtn.cloneNode(true));
+    const newCopyBtn = document.getElementById('copyRingBoundaryCoordsBtn');
 
     newCopyBtn.addEventListener('click', async () => {
       try {
