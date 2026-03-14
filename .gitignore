@@ -55,3 +55,8 @@ coverage/
 *.orig
 *.rej
 
+.agents/*
+.claude/*
+.cline/*
+.cline-plugins/*
+.cursor/*

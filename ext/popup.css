@@ -1,7 +1,17 @@
 *,
 *::before,
 *::after {
-    box-sizing: border-box
+    box-sizing: border-box;
+}
+
+/* 全局平滑滚动 */
+html {
+    scroll-behavior: smooth;
+}
+
+/* 增强的动画过渡 */
+body {
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 :root {
@@ -228,7 +238,7 @@ textarea {
     color: var(--text);
     outline: none;
     font-size: 14px;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     font-family: inherit;
     resize: vertical;
 }
@@ -242,7 +252,14 @@ input[type="number"]:focus,
 input[type="text"]:focus,
 textarea:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1), 0 4px 12px rgba(34, 211, 238, 0.08);
+    transform: translateY(-1px);
+}
+
+input[type="number"]:hover,
+input[type="text"]:hover,
+textarea:hover {
+    border-color: rgba(34, 211, 238, 0.3);
 }
 
 @media (prefers-color-scheme: light) {
@@ -573,11 +590,16 @@ input[type="range"] {
     display: none;
     width: 100%;
     height: 100%;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .page.active {
     display: flex;
     flex-direction: column;
+    opacity: 1;
+    transform: translateY(0);
 }
 
 /* 工具页面头部 */
@@ -865,7 +887,7 @@ input[type="range"] {
     border-radius: 16px;
     padding: 16px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -874,13 +896,36 @@ input[type="range"] {
     min-height: 80px;
     max-height: 80px;
     box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 卡片光泽效果 */
+.tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    transition: left 0.5s ease;
+}
+
+.tool-card:hover::before {
+    left: 100%;
 }
 
 .tool-card:hover,
 .tool-card:focus {
     border-color: var(--accent);
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(34, 211, 238, 0.15);
+    box-shadow: 0 8px 20px rgba(34, 211, 238, 0.15);
+}
+
+.tool-card:active {
+    transform: translateY(0);
+    transition: transform 0.1s ease;
 }
 
 .tool-card.highlighted {
@@ -899,6 +944,8 @@ input[type="range"] {
 .tool-card.add-tool:hover {
     border-color: var(--accent);
     background: rgba(34, 211, 238, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(34, 211, 238, 0.15);
 }
 
 .tool-icon {
@@ -913,11 +960,22 @@ input[type="range"] {
     font-size: 20px;
     font-weight: 600;
     flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+.tool-card:hover .tool-icon {
+    transform: scale(1.05);
 }
 
 .tool-card.add-tool .tool-icon {
     background: var(--muted);
     font-size: 24px;
+    transition: transform 0.3s ease;
+}
+
+.tool-card.add-tool:hover .tool-icon {
+    transform: rotate(90deg) scale(1.1);
+    background: var(--accent);
 }
 
 .tool-content {
@@ -975,6 +1033,12 @@ input[type="range"] {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
 }
 
 .modal-content {
@@ -984,6 +1048,14 @@ input[type="range"] {
     max-width: 400px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     border: 1px solid var(--border);
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal.show .modal-content {
+    transform: scale(1);
+    opacity: 1;
 }
 
 .modal-header {
@@ -1066,7 +1138,28 @@ input[type="range"] {
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 按钮波纹效果 */
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+}
+
+.btn:active::before {
+    width: 200%;
+    height: 200%;
 }
 
 .btn-secondary {
@@ -1076,6 +1169,8 @@ input[type="range"] {
 
 .btn-secondary:hover {
     background: var(--muted);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary {
@@ -1085,11 +1180,19 @@ input[type="range"] {
 
 .btn-primary:hover {
     background: #06b6d4;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 12px rgba(34, 211, 238, 0.3);
 }
 
 .btn-primary:disabled {
     background: var(--muted);
     cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-primary:disabled:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 /* 自定义工具卡片样式 */
