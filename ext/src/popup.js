@@ -339,16 +339,17 @@ class H3Tool {
       }
     });
 
-    // 工具卡片点击事件
-    document.querySelectorAll('.tool-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const toolId = card.dataset.tool;
-        if (toolId === 'add') {
-          this.handleAddTool();
-        } else {
-          this.showTool(toolId);
-        }
-      });
+    // 工具卡片点击事件 - 使用事件委托，支持动态添加的工具卡片
+    document.getElementById('homepage').addEventListener('click', (e) => {
+      const card = e.target.closest('.tool-card');
+      if (!card) return;
+
+      const toolId = card.dataset.tool;
+      if (toolId === 'add') {
+        this.handleAddTool();
+      } else if (toolId) {
+        this.showTool(toolId);
+      }
     });
 
     // 返回按钮
@@ -395,6 +396,12 @@ class H3Tool {
     if (toolId === 'h3') {
       this.router.showPage('h3-tool');
       this.initH3Tool();
+    } else if (toolId.startsWith('custom_')) {
+      // 处理自定义工具
+      const tool = this.toolManager.getToolById(toolId);
+      if (tool && tool.url) {
+        this.handleCustomToolClick(tool);
+      }
     }
   }
 
@@ -416,6 +423,8 @@ class H3Tool {
 
     // 显示模态框
     modal.style.display = 'flex';
+    // 添加 show 类来触发动画（opacity: 0 -> 1）
+    modal.classList.add('show');
 
     // 聚焦到名称输入框
     setTimeout(() => toolNameInput.focus(), 100);
@@ -531,7 +540,12 @@ class H3Tool {
 
   hideAddToolModal() {
     const modal = document.getElementById('addToolModal');
-    modal.style.display = 'none';
+    // 移除 show 类来触发动画（opacity: 1 -> 0）
+    modal.classList.remove('show');
+    // 等待动画完成后再隐藏
+    setTimeout(() => {
+      modal.style.display = 'none';
+    }, 300); // 与CSS transition时间一致
   }
 
   updateCustomToolsDisplay() {
@@ -560,19 +574,10 @@ class H3Tool {
         <button class="delete-btn" data-tool-id="${tool.id}" title="删除工具">×</button>
       `;
 
-      // 添加点击事件
-      toolCard.addEventListener('click', (e) => {
-        // 如果点击的是删除按钮，不触发工具点击
-        if (e.target.classList.contains('delete-btn')) {
-          return;
-        }
-        this.handleCustomToolClick(tool);
-      });
-
-      // 添加删除按钮事件
+      // 删除按钮事件（卡片点击通过事件委托处理）
       const deleteBtn = toolCard.querySelector('.delete-btn');
       deleteBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // 阻止事件冒泡
+        e.stopPropagation(); // 阻止事件冒泡到卡片
         this.handleDeleteCustomTool(tool);
       });
 
