@@ -7,7 +7,8 @@ class PageRouter {
     this.pages = {
       homepage: document.getElementById('homepage'),
       'h3-tool': document.getElementById('h3-tool'),
-      'fence-tool': document.getElementById('fence-tool')
+      'fence-tool': document.getElementById('fence-tool'),
+      'reverse-tool': document.getElementById('reverse-tool')
     };
   }
 
@@ -39,6 +40,13 @@ class ToolManager {
         description: '经纬度转H3网格索引，支持扩圈和可视化',
         icon: '⬢',
         keywords: ['list', 'h3', 'index', '经纬度', '网格', '地理']
+      },
+      {
+        id: 'reverse',
+        name: '字符串反转',
+        description: '输入字符串，输出反转结果',
+        icon: '🔄',
+        keywords: ['reverse', '反转', '字符串', 'string']
       }
     ];
     this.customTools = this.loadCustomTools();
@@ -357,6 +365,14 @@ class H3Tool {
       this.router.goBack();
     });
 
+    // 字符串反转返回按钮
+    const reverseBackBtn = document.getElementById('reverseBackBtn');
+    if (reverseBackBtn) {
+      reverseBackBtn.addEventListener('click', () => {
+        this.router.goBack();
+      });
+    }
+
     // 围栏计算现在在同一个页面内，不需要单独的返回按钮逻辑
     // 保留代码以防将来需要独立页面
     const fenceBackBtn = document.getElementById('fenceBackBtn');
@@ -396,6 +412,9 @@ class H3Tool {
     if (toolId === 'h3') {
       this.router.showPage('h3-tool');
       this.initH3Tool();
+    } else if (toolId === 'reverse') {
+      this.router.showPage('reverse-tool');
+      this.initReverseTool();
     } else if (toolId.startsWith('custom_')) {
       // 处理自定义工具
       const tool = this.toolManager.getToolById(toolId);
@@ -1057,6 +1076,46 @@ class H3Tool {
 
   hideGridError() {
     document.getElementById('gridError').hidden = true;
+  }
+
+  initReverseTool() {
+    const input = document.getElementById('reverseInput');
+    const output = document.getElementById('reverseOutput');
+    const charCount = document.getElementById('reverseCharCount');
+    const copyBtn = document.getElementById('copyReverseBtn');
+
+    if (!input) return;
+
+    const doReverse = () => {
+      const val = input.value;
+      if (!val) {
+        output.textContent = '';
+        charCount.textContent = '';
+        return;
+      }
+      // 使用 spread operator 正确处理 Unicode 字符（如 emoji）
+      const reversed = [...val].reverse().join('');
+      output.textContent = reversed;
+      charCount.textContent = `${[...val].length} 个字符`;
+    };
+
+    input.addEventListener('input', doReverse);
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const text = output.textContent;
+        if (!text) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          const original = copyBtn.textContent;
+          copyBtn.textContent = '✓';
+          setTimeout(() => { copyBtn.textContent = original; }, 1000);
+        } catch (err) {
+          console.error('复制失败:', err);
+          alert('复制失败，请手动复制');
+        }
+      });
+    }
   }
 
   // 根据面积计算圆形半径

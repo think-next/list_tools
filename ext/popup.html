@@ -47,6 +47,15 @@
             </div>
           </div>
 
+          <!-- 字符串反转工具 -->
+          <div class="tool-card" data-tool="reverse">
+            <div class="tool-icon">🔄</div>
+            <div class="tool-content">
+              <h3>字符串反转</h3>
+              <p>输入字符串，输出反转结果</p>
+            </div>
+          </div>
+
           <!-- 新增工具占位符 -->
           <div class="tool-card add-tool" data-tool="add">
             <div class="tool-icon">➕</div>
@@ -242,6 +251,49 @@
 
       <button id="backBtn" class="back-btn">← 返回</button>
       <footer class="footer">基于 H3 网格系统 · h3-js</footer>
+    </div>
+
+    <!-- 字符串反转工具页面 -->
+    <div id="reverse-tool" class="page">
+      <div class="tool-header">
+        <div class="tool-title-section">
+          <div class="tool-icon-large">🔄</div>
+          <h1>字符串反转</h1>
+        </div>
+        <div class="tool-description-section">
+          <p class="tool-description">输入任意字符串，实时输出反转结果</p>
+        </div>
+      </div>
+
+      <section class="card inputs active-tab">
+        <div class="input-row">
+          <div class="field main-field">
+            <label for="reverseInput">输入字符串</label>
+            <input id="reverseInput" type="text" placeholder="输入需要反转的字符串..." autocomplete="off" />
+          </div>
+        </div>
+      </section>
+
+      <div class="results-section">
+        <section class="card result">
+          <div class="result-section">
+            <h3 class="section-title">反转结果</h3>
+            <div class="row">
+              <span class="label">反转后</span>
+              <div class="vertex-coords-container">
+                <code id="reverseOutput" class="mono" style="flex:1;word-break:break-word;"></code>
+                <button id="copyReverseBtn" class="copy-btn" title="复制结果">📋</button>
+              </div>
+            </div>
+            <div class="row">
+              <span class="label">字符数</span>
+              <code id="reverseCharCount" class="mono"></code>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <button id="reverseBackBtn" class="back-btn">← 返回</button>
     </div>
 
     <!-- 围栏计算子页面 -->
