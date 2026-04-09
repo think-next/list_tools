@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "List Tools",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "本地工具集合，提效工作",
   "author": "List Tools Team",
   "permissions": [
-    "tabs"
+    "tabs",
+    "storage"
   ],
   "action": {
     "default_title": "List Tools"

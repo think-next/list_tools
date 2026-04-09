@@ -24,6 +24,7 @@
     <div id="homepage" class="page active">
       <div class="page-header">
         <h1 class="page-title">List Tools</h1>
+        <button id="themeToggle" class="theme-toggle" title="切换主题">💻</button>
       </div>
 
       <section class="search-section">
@@ -38,7 +39,6 @@
 
       <section class="card tools-section">
         <div class="tools-grid" id="builtin-tools">
-          <!-- H3 Index 工具 -->
           <div class="tool-card" data-tool="h3">
             <div class="tool-icon">⬢</div>
             <div class="tool-content">
@@ -47,7 +47,6 @@
             </div>
           </div>
 
-          <!-- 字符串反转工具 -->
           <div class="tool-card" data-tool="reverse">
             <div class="tool-icon">🔄</div>
             <div class="tool-content">
@@ -56,7 +55,6 @@
             </div>
           </div>
 
-          <!-- 新增工具占位符 -->
           <div class="tool-card add-tool" data-tool="add">
             <div class="tool-icon">➕</div>
             <div class="tool-content">
@@ -68,7 +66,13 @@
 
         <!-- 自定义工具区域 -->
         <div id="custom-tools-section" class="custom-tools-section" style="display: none;">
-          <h3 class="custom-tools-title">自定义工具</h3>
+          <div class="custom-tools-header">
+            <h3 class="custom-tools-title">自定义工具</h3>
+            <div class="custom-tools-actions">
+              <button id="exportToolsBtn" class="action-btn" title="导出工具 JSON 到剪贴板">📤</button>
+              <button id="importToolsBtn" class="action-btn" title="导入工具">📥</button>
+            </div>
+          </div>
           <div class="tools-grid" id="custom-tools"></div>
         </div>
       </section>
@@ -192,8 +196,6 @@
                 <button id="copyVertexCoordsBtn" class="copy-btn" title="复制所有顶点坐标">📋</button>
               </div>
             </div>
-
-            <!-- 边界提取 & 蜂窝围栏（参考围栏计算） -->
             <div class="row verts-row">
               <span class="label">边界提取</span>
               <div class="vertex-coords-container">
@@ -295,56 +297,8 @@
 
       <button id="reverseBackBtn" class="back-btn">← 返回</button>
     </div>
-
-    <!-- 围栏计算子页面 -->
-    <div id="fence-tool" class="page">
-      <div class="tool-header">
-        <div class="tool-title-section">
-          <div class="tool-icon-large">🔲</div>
-          <h1>围栏计算</h1>
-        </div>
-        <div class="tool-description-section">
-          <p class="tool-description">基于H3网格的围栏计算功能，支持围栏区域分析和网格覆盖计算</p>
-        </div>
-      </div>
-
-      <section class="card inputs">
-        <div class="input-row">
-          <div class="field main-field">
-            <label for="fenceInput">围栏坐标</label>
-            <textarea id="fenceInput" rows="4"
-              placeholder="输入围栏坐标点，每行一个坐标点&#10;格式：经度,纬度&#10;例如：&#10;-122.418,37.775&#10;-122.419,37.776&#10;-122.420,37.775"></textarea>
-          </div>
-        </div>
-        <div class="input-row">
-          <div class="field tiny-field">
-            <label for="fenceRes">网格级别</label>
-            <input id="fenceRes" type="number" min="0" max="15" value="10" />
-          </div>
-        </div>
-        <p id="fenceError" class="error" hidden></p>
-      </section>
-
-      <div class="results-section">
-        <section class="card result">
-          <div class="result-section">
-            <h3 class="section-title">围栏计算结果</h3>
-            <div class="row">
-              <span class="label">覆盖网格数量</span>
-              <code id="fence-cell-count" class="mono"></code>
-            </div>
-            <div class="row verts-row">
-              <span class="label">覆盖网格列表</span>
-              <div id="fence-cells" class="mono verts-display"></div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <button id="fenceBackBtn" class="back-btn">← 返回</button>
-      <footer class="footer">基于 H3 网格系统 · h3-js</footer>
-    </div>
   </div>
+
   <script type="module" src="src/popup.js"></script>
 
   <!-- 新增工具模态框 -->
@@ -371,8 +325,26 @@
     </div>
   </div>
 
-</body>
+  <!-- 导入工具模态框 -->
+  <div id="importModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>导入自定义工具</h2>
+        <button id="importCloseBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="importText">粘贴导出的 JSON 数据</label>
+          <textarea id="importText" rows="6" placeholder='{"version":1,"tools":[...]}'></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="importCancelBtn" class="btn btn-secondary">取消</button>
+        <button id="importSaveBtn" class="btn btn-primary">导入</button>
+      </div>
+    </div>
+  </div>
 
-</html>
+</body>
 
 </html>
