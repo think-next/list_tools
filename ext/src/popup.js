@@ -1257,4 +1257,11 @@ class H3Tool {
 // ============================================
 
 const app = new H3Tool();
-app.init();
+app.init().catch(e => {
+  console.error('List Tools init failed:', e);
+  // 即使初始化失败也要保证基本 UI 可用
+  try {
+    app.setupEventListeners();
+    app.showHomepage();
+  } catch (e2) { console.error('List Tools recovery failed:', e2); }
+});
