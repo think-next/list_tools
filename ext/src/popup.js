@@ -160,7 +160,7 @@ class ToolManager {
   async addCustomTool(name, url) {
     const tool = {
       id: 'custom_' + Date.now(), name, url,
-      description: '自定义工具链接', icon: '🔗',
+      description: url, icon: '🔗',
       keywords: ['custom', 'link', '自定义', name.toLowerCase()]
     };
     this.customTools.push(tool);
@@ -374,7 +374,7 @@ class H3Tool {
   }
 
   toggleTheme() {
-    const THEMES = ['auto', 'light', 'dark'];
+    const THEMES = ['auto', 'dark', 'light'];
     const current = localStorage.getItem('lt_theme') || 'auto';
     const next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
     if (next === 'auto') {
