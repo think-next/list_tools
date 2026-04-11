@@ -57,7 +57,7 @@ class CopyManager {
         await navigator.clipboard.writeText(text);
         const orig = btn.textContent;
         btn.textContent = '✓';
-        btn.style.background = 'var(--ok, #00ff9d)';
+        btn.style.background = 'var(--status-success, #16a34a)';
         setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1000);
       } catch (e) {
         console.error('复制失败:', e);
