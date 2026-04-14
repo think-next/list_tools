@@ -55,6 +55,14 @@
             </div>
           </div>
 
+          <div class="tool-card" data-tool="distance">
+            <div class="tool-icon">📏</div>
+            <div class="tool-content">
+              <h3>距离计算</h3>
+              <p>多点直线距离计算</p>
+            </div>
+          </div>
+
           <div class="tool-card add-tool" data-tool="add">
             <div class="tool-icon">➕</div>
             <div class="tool-content">
@@ -296,6 +304,56 @@
       </div>
 
       <button id="reverseBackBtn" class="back-btn">← 返回</button>
+    </div>
+
+    <!-- 距离计算工具页面 -->
+    <div id="distance-tool" class="page">
+      <div class="tool-header">
+        <div class="tool-title-section">
+          <div class="tool-icon-large">📏</div>
+          <h1>距离计算</h1>
+        </div>
+        <div class="tool-description-section">
+          <p class="tool-description">输入多个经纬度坐标，按顺序计算相邻点位之间的直线距离</p>
+        </div>
+      </div>
+
+      <section class="card inputs active-tab">
+        <div class="input-row">
+          <div class="field main-field">
+            <label for="distanceInput">坐标点</label>
+            <textarea id="distanceInput" rows="4"
+              placeholder="输入坐标点，用分号分隔&#10;格式：经度,纬度;经度,纬度;...&#10;例如：&#10;116.397428,39.90923;116.410428,39.91923;116.397428,39.90923"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <div class="results-section">
+        <section class="card result">
+          <div class="result-section">
+            <h3 class="section-title">计算结果</h3>
+            <div class="row">
+              <span class="label">点位数</span>
+              <code id="distancePointCount" class="mono"></code>
+            </div>
+            <div class="row">
+              <span class="label">总距离</span>
+              <div class="vertex-coords-container">
+                <code id="distanceTotal" class="mono" style="flex:1;"></code>
+                <button id="copyDistanceTotalBtn" class="copy-btn" title="复制总距离">📋</button>
+              </div>
+            </div>
+            <div class="row verts-row">
+              <span class="label">逐段距离</span>
+              <div id="distanceSegments" class="mono verts-display"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <p id="distanceError" class="error" hidden></p>
+
+      <button id="distanceBackBtn" class="back-btn">← 返回</button>
     </div>
   </div>
 

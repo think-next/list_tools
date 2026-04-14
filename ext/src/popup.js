@@ -96,7 +96,8 @@ class PageRouter {
     this.pages = {
       homepage: document.getElementById('homepage'),
       'h3-tool': document.getElementById('h3-tool'),
-      'reverse-tool': document.getElementById('reverse-tool')
+      'reverse-tool': document.getElementById('reverse-tool'),
+      'distance-tool': document.getElementById('distance-tool')
     };
   }
 
@@ -131,6 +132,12 @@ class ToolManager {
         description: '输入字符串，输出反转结果',
         icon: '🔄',
         keywords: ['reverse', '反转', '字符串', 'string']
+      },
+      {
+        id: 'distance', name: '距离计算',
+        description: '多点直线距离计算',
+        icon: '📏',
+        keywords: ['distance', '距离', '直线', '经纬度', '坐标', '测距']
       }
     ];
     this.customTools = [];
@@ -445,6 +452,8 @@ class H3Tool {
     document.getElementById('backBtn').addEventListener('click', () => this.router.goBack());
     const reverseBackBtn = document.getElementById('reverseBackBtn');
     if (reverseBackBtn) reverseBackBtn.addEventListener('click', () => this.router.goBack());
+    const distanceBackBtn = document.getElementById('distanceBackBtn');
+    if (distanceBackBtn) distanceBackBtn.addEventListener('click', () => this.router.goBack());
 
     // 键盘导航
     document.addEventListener('keydown', e => {
@@ -470,6 +479,9 @@ class H3Tool {
     } else if (toolId === 'reverse') {
       this.router.showPage('reverse-tool');
       this.initReverseTool();
+    } else if (toolId === 'distance') {
+      this.router.showPage('distance-tool');
+      this.initDistanceTool();
     } else if (toolId.startsWith('custom_')) {
       const tool = this.toolManager.getToolById(toolId);
       if (tool?.url) chrome.tabs.create({ url: tool.url });
@@ -703,6 +715,90 @@ class H3Tool {
 
     input.addEventListener('input', doReverse);
     this.copyManager.bind('copyReverseBtn', () => output.textContent);
+  }
+
+  // ------ 距离计算工具 ------
+
+  initDistanceTool() {
+    const input = document.getElementById('distanceInput');
+    if (!input) return;
+
+    const saved = this.history.load('distanceInput');
+    if (saved && !input.value) input.value = saved;
+
+    const doCompute = () => {
+      try {
+        this.hideError('distanceError');
+        const text = input.value.trim();
+        if (!text) {
+          document.getElementById('distancePointCount').textContent = '';
+          document.getElementById('distanceTotal').textContent = '';
+          document.getElementById('distanceSegments').textContent = '';
+          return;
+        }
+
+        this.history.save('distanceInput', text);
+
+        const points = text.split(';').map(p => p.trim()).filter(Boolean);
+        if (points.length < 2) {
+          this.showError('distanceError', '至少需要2个坐标点');
+          return;
+        }
+
+        const coords = [];
+        for (const point of points) {
+          const norm = point.replace(/，/g, ',');
+          const parts = norm.split(',').map(p => p.trim()).filter(Boolean);
+          if (parts.length === 1) {
+            const sp = norm.split(/\s+/).filter(Boolean);
+            if (sp.length === 2) coords.push([parseFloat(sp[0]), parseFloat(sp[1])]);
+            else { this.showError('distanceError', `坐标格式错误：${point}`); return; }
+          } else if (parts.length === 2) {
+            coords.push([parseFloat(parts[0]), parseFloat(parts[1])]);
+          } else {
+            this.showError('distanceError', `坐标格式错误：${point}`); return;
+          }
+
+          const [lng, lat] = coords[coords.length - 1];
+          if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+            this.showError('distanceError', `无效的坐标：${point}`); return;
+          }
+          if (lat < -90 || lat > 90) {
+            this.showError('distanceError', `纬度超出范围：${point}`); return;
+          }
+          if (lng < -180 || lng > 180) {
+            this.showError('distanceError', `经度超出范围：${point}`); return;
+          }
+        }
+
+        const segments = [];
+        let total = 0;
+        const lines = [];
+        for (let i = 1; i < coords.length; i++) {
+          const [lng1, lat1] = coords[i - 1];
+          const [lng2, lat2] = coords[i];
+          const d = haversineDistance(lat1, lng1, lat2, lng2);
+          total += d;
+          segments.push(d);
+          const label = d >= 1000 ? `${(d / 1000).toFixed(3)} km` : `${d.toFixed(2)} m`;
+          lines.push(`点${i} → 点${i + 1}: ${label}`);
+        }
+
+        document.getElementById('distancePointCount').textContent = `${coords.length} 个点`;
+        const totalLabel = total >= 1000
+          ? `${(total / 1000).toFixed(3)} km` : `${total.toFixed(2)} m`;
+        document.getElementById('distanceTotal').textContent = totalLabel;
+        document.getElementById('distanceSegments').textContent = lines.join('\n');
+
+        this.copyManager.bind('copyDistanceTotalBtn', totalLabel);
+      } catch (e) {
+        this.showError('distanceError', e.message || String(e));
+      }
+    };
+
+    const debouncedCompute = debounce(doCompute);
+    input.addEventListener('input', debouncedCompute);
+    doCompute();
   }
 
   // ------ #8 统一错误处理 ------
